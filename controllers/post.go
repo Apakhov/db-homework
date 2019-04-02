@@ -55,3 +55,74 @@ func CreatePost(ctx *fasthttp.RequestCtx) {
 	ctx.SetContentType("plain/text")
 	ctx.SetBody(resp)
 }
+
+func GetPosts(ctx *fasthttp.RequestCtx) {
+	args := ctx.URI().QueryArgs()
+	var limit *int
+	if args.Has("limit") {
+		temp, _ := strconv.Atoi(string(args.Peek("limit")))
+		limit = &temp
+	}
+	var since *int
+	if args.Has("since") {
+		temp, _ := strconv.Atoi(string(args.Peek("since")))
+		since = &temp
+	}
+	var desc bool
+	if args.Has("desc") {
+		desc, _ = strconv.ParseBool(string(args.Peek("desc")))
+	}
+	var sort *string
+	if args.Has("sort") {
+		temp := string(args.Peek("sort"))
+		sort = &temp
+	}
+	slug := ctx.UserValue("slug_or_id").(string)
+	id, err := strconv.Atoi(slug)
+	if err != nil {
+		id = 0
+	}
+	var ps []models.Post
+	if sort == nil || (*sort)[0] == 'f' {
+		if id == 0 {
+			ps = models.GetPostsFlat(&slug, nil, limit, since, desc)
+		} else {
+			ps = models.GetPostsFlat(nil, &id, limit, since, desc)
+		}
+	} else if (*sort)[0] == 't' {
+		if id == 0 {
+			ps = models.GetPostsTree(&slug, nil, limit, since, desc)
+		} else {
+			ps = models.GetPostsTree(nil, &id, limit, since, desc)
+		}
+	} else if (*sort)[0] == 'p' {
+		if id == 0 {
+			ps = models.GetPostsParentTree(&slug, nil, limit, since, desc)
+		} else {
+			ps = models.GetPostsParentTree(nil, &id, limit, since, desc)
+		}
+	}
+	if sort != nil {
+		fmt.Println("sort:asdasdsda: ", *sort, (*sort)[0] == 't', (*sort)[0])
+	}
+
+	if ps != nil {
+		fmt.Println("on final contr", len(ps))
+		resp, _ := json.Marshal(ps)
+
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		ctx.SetContentType("application/json")
+		ctx.SetBody(resp)
+
+		return
+	} else {
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
+		ctx.SetContentType("application/json")
+		if id == 0 {
+			fmt.Fprint(ctx, `{"message": "Can't find thread by slug: `, slug, `"}`)
+		} else {
+			fmt.Fprint(ctx, `{"message": "Can't find thread by id: `, id, `"}`)
+		}
+		return
+	}
+}

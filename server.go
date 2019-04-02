@@ -33,8 +33,13 @@ func main() {
 	router.GET("/api/forum/:slug/details", controllers.GetForum)
 	router.POST("/api/forum/:slug/create", CreateForumControl)
 	router.GET("/api/forum/:slug/threads", controllers.GetThreadsByForumSlug)
+	router.GET("/api/forum/:slug/users", controllers.GetUsers)
 
 	router.POST("/api/thread/:slug_or_id/create", controllers.CreatePost)
 	router.POST("/api/thread/:slug_or_id/vote", controllers.Vote)
+	router.GET("/api/thread/:slug_or_id/details", controllers.GetThread)
+	router.POST("/api/thread/:slug_or_id/details", controllers.UpdateThread)
+	router.GET("/api/thread/:slug_or_id/posts", controllers.GetPosts)
+
 	log.Fatal(fasthttp.ListenAndServe(":8080", router.Handler))
 }

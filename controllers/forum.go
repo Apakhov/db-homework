@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/db-homework/models"
 	"github.com/valyala/fasthttp"
@@ -51,5 +52,40 @@ func GetForum(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		ctx.SetContentType("application/json")
 		fmt.Fprint(ctx, `{"message": "Can't find forum by slug: `, slug, `"}`)
+	}
+}
+
+func GetUsers(ctx *fasthttp.RequestCtx) {
+	args := ctx.URI().QueryArgs()
+	slug := ctx.UserValue("slug").(string)
+
+	var since *string
+	var limit *int
+	var desc *bool
+
+	if args.Has("limit") {
+		l, _ := strconv.Atoi(string(args.Peek("limit")))
+		limit = &l
+	}
+	if args.Has("desc") {
+		d, _ := strconv.ParseBool(string(args.Peek("desc")))
+		desc = &d
+	}
+	if args.Has("since") {
+		s := string(args.Peek("since"))
+		since = &s
+	}
+	fmt.Println("sluuuuuuuuuuug:", slug)
+	us, ok := models.GetUsers(&slug, limit, since, desc)
+	if !ok {
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
+		ctx.SetContentType("application/json")
+		fmt.Fprint(ctx, `{"message": "Can't find forum by slug: `, slug, `"}`)
+	} else {
+		resp, _ := json.Marshal(us)
+
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		ctx.SetContentType("application/json")
+		ctx.SetBody(resp)
 	}
 }

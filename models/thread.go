@@ -42,17 +42,17 @@ func CreateThread(tdescr *ThreadDescr) (nameMiss bool, slugMiss bool, th Thread,
 		tx.Commit()
 		ok = true
 		return
-	} else {
-		tx.Commit()
-		tx, _ = conn.Begin()
-		row = tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", tdescr.Slug)
-		err := row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
-		fmt.Println("lol here")
-		if err != nil {
-			fmt.Println("thred conf err: ", err)
-		}
-		return
 	}
+	tx.Commit()
+	tx, _ = conn.Begin()
+	row = tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", tdescr.Slug)
+	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
+	fmt.Println("lol here")
+	if err != nil {
+		fmt.Println("thred conf err: ", err)
+	}
+	return
+
 }
 
 const getThreadsByForumSlugTpl = `
@@ -135,15 +135,15 @@ func VoteID(id int, vote *Vote) (th *Thread) {
 		fmt.Println("voting id insert err: ", err)
 		return
 	}
-	tx.Commit()
 
-	tx, _ = conn.Begin()
 	th = &Thread{}
 	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE id = $1;", id)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
 		fmt.Println("voting id get thread err: ", err)
 	}
+
+	tx.Commit()
 
 	return
 }
@@ -165,15 +165,98 @@ func VoteSlug(slug *string, vote *Vote) (th *Thread) {
 		fmt.Println("voting slug insert err: ", err)
 		return
 	}
-	tx.Commit()
 
-	tx, _ = conn.Begin()
 	th = &Thread{}
 	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", slug)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
 		fmt.Println("voting slug get thread err: ", err)
 	}
+	tx.Commit()
+	return
+}
+
+const UpdateThreadSlugTpl = `
+UPDATE threads
+SET message = CASE WHEN LENGTH($1) > 0 THEN $1 ELSE message END,
+    title = CASE WHEN LENGTH($2) > 0 THEN $2 ELSE title END
+WHERE slug = $3;`
+
+func UpdateThreadSlug(slug *string, vote *ThreadUPD) (th *Thread) {
+	tx, _ := conn.Begin()
+	defer tx.Rollback()
+
+	_, err := tx.Exec(UpdateThreadSlugTpl, vote.Message, vote.Title, slug)
+	if err != nil {
+		fmt.Println("upd thread slug insert err: ", err)
+		return
+	}
+
+	th = &Thread{}
+	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", slug)
+	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
+	if err != nil {
+		fmt.Println("upd thread slug get thread err: ", err)
+	}
+	tx.Commit()
+
+	return
+}
+
+const UpdateThreadIDTpl = `
+UPDATE threads
+SET message = CASE WHEN LENGTH($1) > 0 THEN $1 ELSE message END,
+    title = CASE WHEN LENGTH($2) > 0 THEN $2 ELSE title END
+WHERE id = $3;`
+
+func UpdateThreadID(id *int, vote *ThreadUPD) (th *Thread) {
+	tx, _ := conn.Begin()
+	defer tx.Rollback()
+
+	_, err := tx.Exec(UpdateThreadIDTpl, vote.Message, vote.Title, id)
+	if err != nil {
+		fmt.Println("upd thread id insert err: ", err)
+		return
+	}
+
+	th = &Thread{}
+	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE id = $1;", id)
+	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
+	if err != nil {
+		fmt.Println("upd thread id get thread err: ", err)
+	}
+	tx.Commit()
+
+	return
+}
+
+func GetThreadSlug(slug *string) (th *Thread) {
+	tx, _ := conn.Begin()
+	defer tx.Rollback()
+
+	th = &Thread{}
+	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", slug)
+	err := row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
+	if err != nil {
+		fmt.Println("get thread slug get thread err: ", err)
+	}
+	tx.Commit()
+
+	return
+}
+
+func GetThreadID(id *int) (th *Thread) {
+	tx, _ := conn.Begin()
+	defer tx.Rollback()
+
+	th = &Thread{}
+	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE id = $1;", id)
+	err := row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
+	if err != nil {
+		fmt.Println("get thread id get thread err: ", err)
+		return nil
+	}
+	tx.Commit()
 
 	return
 }

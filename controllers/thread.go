@@ -136,3 +136,66 @@ func Vote(ctx *fasthttp.RequestCtx) {
 		return
 	}
 }
+
+func UpdateThread(ctx *fasthttp.RequestCtx) {
+	thUPD := models.ThreadUPD{}
+	err := json.Unmarshal(ctx.PostBody(), &thUPD)
+	if err != nil {
+		fmt.Println("UpdateThread unmarshal err:", err)
+	}
+	slug := ctx.UserValue("slug_or_id").(string)
+	id, err := strconv.Atoi(slug)
+	if err != nil {
+		id = 0
+	}
+
+	var th *models.Thread
+	if id == 0 {
+		th = models.UpdateThreadSlug(&slug, &thUPD)
+	} else {
+		th = models.UpdateThreadID(&id, &thUPD)
+	}
+	if th == nil {
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
+		ctx.SetContentType("application/json")
+		ctx.SetBody([]byte(`{"message": "Can't find thread by slug or id"}`))
+		return
+	} else {
+		resp, _ := json.Marshal(th)
+
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		ctx.SetContentType("application/json")
+		ctx.SetBody(resp)
+
+		return
+	}
+}
+
+func GetThread(ctx *fasthttp.RequestCtx) {
+	slug := ctx.UserValue("slug_or_id").(string)
+	id, err := strconv.Atoi(slug)
+	if err != nil {
+		id = 0
+	}
+
+	var th *models.Thread
+	if id == 0 {
+		th = models.GetThreadSlug(&slug)
+	} else {
+		th = models.GetThreadID(&id)
+	}
+	if th == nil {
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
+		ctx.SetContentType("application/json")
+		ctx.SetBody([]byte(`{"message": "Can't find thread by slug or id"}`))
+		return
+	} else {
+		resp, _ := json.Marshal(th)
+
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		ctx.SetContentType("application/json")
+		ctx.SetBody(resp)
+
+		return
+	}
+}

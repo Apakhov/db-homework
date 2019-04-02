@@ -45,6 +45,11 @@ type Thread struct {
 	Votes   int64     `json:"votes"`
 }
 
+type ThreadUPD struct {
+	Message string `json:"message"`
+	Title   string `json:"title"`
+}
+
 type PostDescr struct {
 	Author  string `json:"author"`
 	Message string `json:"message"`
