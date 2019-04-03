@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/db-homework/controllers"
+	"github.com/Apakhov/db-homework/controllers"
 
 	"github.com/buaazp/fasthttprouter"
 	"github.com/valyala/fasthttp"

@@ -3,7 +3,7 @@ package controllers
 import (
 	"encoding/json"
 
-	"github.com/db-homework/models"
+	"github.com/Apakhov/db-homework/models"
 	"github.com/valyala/fasthttp"
 )
 

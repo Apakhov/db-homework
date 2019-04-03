@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/db-homework/models"
+	"github.com/Apakhov/db-homework/models"
 	"github.com/valyala/fasthttp"
 )
 
