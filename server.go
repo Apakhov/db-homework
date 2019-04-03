@@ -47,5 +47,5 @@ func main() {
 	router.GET("/api/service/status", controllers.GetInfo)
 	router.POST("/api/service/clear", controllers.Clear)
 
-	log.Fatal(fasthttp.ListenAndServe(":8080", router.Handler))
+	log.Fatal(fasthttp.ListenAndServe(":5000", router.Handler))
 }

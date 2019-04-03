@@ -15,6 +15,7 @@ func init() {
 		User:     "docker",
 		Password: "docker",
 		Database: "docker",
+		Port:     5432,
 	}
 	var err error
 	conn, err = pgx.Connect(config)
