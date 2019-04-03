@@ -41,5 +41,11 @@ func main() {
 	router.POST("/api/thread/:slug_or_id/details", controllers.UpdateThread)
 	router.GET("/api/thread/:slug_or_id/posts", controllers.GetPosts)
 
+	router.GET("/api/post/:id/details", controllers.GetPostInfo)
+	router.POST("/api/post/:id/details", controllers.UpdatePost)
+
+	router.GET("/api/service/status", controllers.GetInfo)
+	router.POST("/api/service/clear", controllers.Clear)
+
 	log.Fatal(fasthttp.ListenAndServe(":8080", router.Handler))
 }

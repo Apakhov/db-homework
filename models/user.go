@@ -1,30 +1,5 @@
 package models
 
-import (
-	"log"
-
-	"github.com/jackc/pgx"
-)
-
-var conn *pgx.Conn
-
-func init() {
-	config := pgx.ConnConfig{
-		Host:     "localhost",
-		User:     "db_user",
-		Password: "1234",
-		Database: "test_base",
-	}
-	var err error
-	conn, err = pgx.Connect(config)
-	if err != nil {
-		log.Fatalf("cant connest to db: %v", err)
-	}
-	log.Println("base up")
-}
-
-
-
 const findSameEmailOrNickTpl = `
 SELECT about, email, fullname, nickname FROM users
 WHERE nickname = $1 OR  email = $2;`

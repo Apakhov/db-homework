@@ -71,3 +71,17 @@ type Vote struct {
 	Nickname string `json:"nickname"`
 	Voice    int    `json:"voice"`
 }
+
+type PostInfo struct {
+	U *User   `json:"author"`
+	F *Forum  `json:"forum"`
+	P *Post   `json:"post"`
+	T *Thread `json:"thread"`
+}
+
+type DBInfo struct {
+	Forums  int `json:"forum"`
+	Posts   int `json:"post"`
+	Threads int `json:"thread"`
+	Users   int `json:"user"`
+}

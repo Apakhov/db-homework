@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/db-homework/models"
 	"github.com/valyala/fasthttp"
@@ -15,6 +16,14 @@ func CreatePost(ctx *fasthttp.RequestCtx) {
 	if err != nil {
 		fmt.Println("unmarshal err:", err)
 	}
+	// if len(posts) == 0 {
+	// 	resp, _ := json.Marshal(posts)
+
+	// 	ctx.SetStatusCode(fasthttp.StatusCreated)
+	// 	ctx.SetContentType("application/json")
+	// 	ctx.SetBody(resp)
+	// 	return
+	// }
 	fmt.Println("posts on query", posts)
 	slug := ctx.UserValue("slug_or_id").(string)
 	id, err := strconv.Atoi(slug)
@@ -23,10 +32,11 @@ func CreatePost(ctx *fasthttp.RequestCtx) {
 	}
 	var threadMiss bool
 	var ps []models.Post
+	var conf bool
 	if id == 0 {
-		threadMiss, ps = models.CreatePost(&slug, nil, posts)
+		conf, threadMiss, ps = models.CreatePost(&slug, nil, posts)
 	} else {
-		threadMiss, ps = models.CreatePost(nil, &id, posts)
+		conf, threadMiss, ps = models.CreatePost(nil, &id, posts)
 	}
 	if threadMiss {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
@@ -36,6 +46,14 @@ func CreatePost(ctx *fasthttp.RequestCtx) {
 		} else {
 			fmt.Fprint(ctx, `{"message": "Can't find thread by id: `, id, `"}`)
 		}
+		return
+	}
+
+	if conf {
+		ctx.SetStatusCode(fasthttp.StatusConflict)
+		ctx.SetContentType("application/json")
+		fmt.Fprint(ctx, `{"message": "Parent post was created in another thread"}`)
+
 		return
 	}
 
@@ -124,5 +142,77 @@ func GetPosts(ctx *fasthttp.RequestCtx) {
 			fmt.Fprint(ctx, `{"message": "Can't find thread by id: `, id, `"}`)
 		}
 		return
+	}
+}
+
+func GetPostInfo(ctx *fasthttp.RequestCtx) {
+	args := ctx.URI().QueryArgs()
+	id, _ := strconv.Atoi(ctx.UserValue("id").(string))
+	needAuthor := false
+	needForum := false
+	needThread := false
+	if args.Has("related") {
+		temp := string(args.Peek("related"))
+		related := strings.Split(temp, ",")
+		fmt.Println(temp, related)
+		for _, r := range related {
+			if !needAuthor && r[0] == 'u' {
+				needAuthor = true
+				continue
+			}
+			if !needForum && r[0] == 'f' {
+				needForum = true
+				continue
+			}
+			if !needThread && r[0] == 't' {
+				needThread = true
+				continue
+			}
+		}
+
+	}
+
+	pi := models.GetPostInfo(id, needAuthor, needForum, needThread)
+	if pi == nil {
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
+		ctx.SetContentType("application/json")
+		fmt.Fprint(ctx, `{"message": "Can't find post by id: `, id, `"}`)
+	} else {
+		resp, _ := json.Marshal(pi)
+
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		ctx.SetContentType("application/json")
+		ctx.SetBody(resp)
+	}
+
+}
+
+type Message struct {
+	Msg string `json:"message"`
+}
+
+func UpdatePost(ctx *fasthttp.RequestCtx) {
+	message := Message{}
+	json.Unmarshal(ctx.PostBody(), &message)
+	id, _ := strconv.Atoi(ctx.UserValue("id").(string))
+	var p *models.Post
+	if message.Msg != "" {
+		p = models.UpdatePost(id, &message.Msg)
+	} else {
+		pi := models.GetPostInfo(id, false, false, false)
+		if pi != nil {
+			p = pi.P
+		}
+	}
+	if p == nil {
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
+		ctx.SetContentType("application/json")
+		fmt.Fprint(ctx, `{"message": "Can't find post by id: `, id, `"}`)
+	} else {
+		resp, _ := json.Marshal(p)
+
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		ctx.SetContentType("application/json")
+		ctx.SetBody(resp)
 	}
 }

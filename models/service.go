@@ -1,4 +1,60 @@
-DROP  TABLE IF EXISTS users CASCADE;
+package models
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/jackc/pgx"
+)
+
+var conn *pgx.Conn
+
+func init() {
+	config := pgx.ConnConfig{
+		Host:     "localhost",
+		User:     "db_user",
+		Password: "1234",
+		Database: "test_base",
+	}
+	var err error
+	conn, err = pgx.Connect(config)
+	if err != nil {
+		log.Fatalf("cant connest to db: %v", err)
+	}
+	log.Println("base up")
+}
+
+func RestartDB() {
+
+}
+
+func GetInfo() (info *DBInfo) {
+	tx, _ := conn.Begin()
+	defer tx.Rollback()
+
+	info = &DBInfo{}
+	row := tx.QueryRow(`SELECT forums, posts, threads, users FROM info LIMIT 1;`)
+	err := row.Scan(&info.Forums, &info.Posts, &info.Threads, &info.Users)
+	if err != nil {
+		fmt.Println("get info err:", err)
+		return nil
+	}
+	return
+}
+
+func Clear() {
+	tx, _ := conn.Begin()
+	defer tx.Rollback()
+
+	_, err := tx.Exec(clearTpl)
+	if err != nil {
+		fmt.Println("clear err:", err)
+		return
+	}
+	tx.Commit()
+}
+
+const clearTpl = `DROP  TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
   id bigserial NOT NULL PRIMARY KEY,
   about varchar(1024) ,
@@ -260,3 +316,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER info_users_inc AFTER INSERT ON users
     FOR EACH ROW EXECUTE PROCEDURE info_users_inc();
 COMMIT;
+`

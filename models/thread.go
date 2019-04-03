@@ -197,6 +197,7 @@ func UpdateThreadSlug(slug *string, vote *ThreadUPD) (th *Thread) {
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
 		fmt.Println("upd thread slug get thread err: ", err)
+		return nil
 	}
 	tx.Commit()
 
@@ -224,6 +225,7 @@ func UpdateThreadID(id *int, vote *ThreadUPD) (th *Thread) {
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
 		fmt.Println("upd thread id get thread err: ", err)
+		return nil
 	}
 	tx.Commit()
 
@@ -239,8 +241,8 @@ func GetThreadSlug(slug *string) (th *Thread) {
 	err := row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
 		fmt.Println("get thread slug get thread err: ", err)
+		return nil
 	}
-	tx.Commit()
 
 	return
 }
@@ -256,7 +258,6 @@ func GetThreadID(id *int) (th *Thread) {
 		fmt.Println("get thread id get thread err: ", err)
 		return nil
 	}
-	tx.Commit()
 
 	return
 }
