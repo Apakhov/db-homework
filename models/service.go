@@ -11,10 +11,10 @@ var conn *pgx.Conn
 
 func init() {
 	config := pgx.ConnConfig{
-		Host:     "localhost",
-		User:     "db_user",
-		Password: "1234",
-		Database: "test_base",
+		Host:     "docker",
+		User:     "docker",
+		Password: "docker",
+		Database: "docker",
 	}
 	var err error
 	conn, err = pgx.Connect(config)
@@ -22,10 +22,7 @@ func init() {
 		log.Fatalf("cant connest to db: %v", err)
 	}
 	log.Println("base up")
-}
-
-func RestartDB() {
-
+	Clear()
 }
 
 func GetInfo() (info *DBInfo) {
