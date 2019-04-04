@@ -11,19 +11,26 @@ var conn *pgx.Conn
 
 func init() {
 	config := pgx.ConnConfig{
-		Host:     "docker",
+		Host:     "localhost",
 		User:     "docker",
 		Password: "docker",
 		Database: "docker",
 		Port:     5432,
 	}
 	var err error
+	fmt.Printf("%+v", config)
 	conn, err = pgx.Connect(config)
 	if err != nil {
-		log.Fatalf("cant connest to db: %v", err)
+		log.Fatalf("cant connest to db 1: %v", err)
 	}
-	log.Println("base up")
+	log.Println("base up 1")
 	Clear()
+	conn.Close()
+	conn, err = pgx.Connect(config)
+	if err != nil {
+		log.Fatalf("cant connest to db 2: %v", err)
+	}
+	log.Println("base up 2")
 }
 
 func GetInfo() (info *DBInfo) {
@@ -52,7 +59,10 @@ func Clear() {
 	tx.Commit()
 }
 
-const clearTpl = `DROP  TABLE IF EXISTS users CASCADE;
+const clearTpl = `
+CREATE EXTENSION IF NOT EXISTS citext;
+
+DROP  TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
   id bigserial NOT NULL PRIMARY KEY,
   about varchar(1024) ,

@@ -62,4 +62,4 @@ RUN go build
 EXPOSE 5000
 
 USER postgres
-CMD  service postgresql start && ./db-homework
+CMD  service postgresql start && pg_isready && ./db-homework

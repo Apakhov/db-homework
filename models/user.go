@@ -1,5 +1,7 @@
 package models
 
+import "fmt"
+
 const findSameEmailOrNickTpl = `
 SELECT about, email, fullname, nickname FROM users
 WHERE nickname = $1 OR  email = $2;`
@@ -12,7 +14,9 @@ func CreateUser(user *User) []User {
 	users := make([]User, 0, 0)
 	_, err := conn.Exec(createUserTpl, user.About, user.Email, user.Fullname, user.Nickname)
 	if err != nil {
-		rowsConf, _ := conn.Query(findSameEmailOrNickTpl, user.Nickname, user.Email)
+		fmt.Println("CreateUser err:", err)
+		rowsConf, err := conn.Query(findSameEmailOrNickTpl, user.Nickname, user.Email)
+		fmt.Println("CreateUser after err:", err)
 		defer rowsConf.Close()
 
 		for rowsConf.Next() {
