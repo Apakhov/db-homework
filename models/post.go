@@ -14,22 +14,22 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 	id := 0
 	forum := ""
 	if threadSlug != nil {
-		fmt.Println("finding by slug")
+		//fmt.Println("finding by slug")
 		row := tx.QueryRow("SELECT id, forum FROM threads WHERE slug = $1;", *threadSlug)
 		if row.Scan(&id, &forum) != nil {
 			return false, true, nil
 		}
 	} else {
-		fmt.Println("finding by id")
+		//fmt.Println("finding by id")
 		row := tx.QueryRow("SELECT id, forum FROM threads WHERE id = $1;", *threadID)
 		err := row.Scan(&id, &forum)
 		if err != nil {
-			fmt.Println("id thread not found:", err)
+			//fmt.Println("id thread not found:", err)
 			return false, true, nil
 		}
 	}
 	if len(pdescrs) == 0 {
-		fmt.Println("zero posts got")
+		//fmt.Println("zero posts got")
 		return false, false, make([]Post, 0, 0)
 	}
 	var queryBuffer bytes.Buffer
@@ -69,12 +69,12 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 		}
 	}
 	queryBuffer.WriteString(` RETURNING  author, created, forum, id, isEdited, message, parent, thread;`)
-	fmt.Println("kek query:", queryBuffer.String())
+	//fmt.Println("kek query:", queryBuffer.String())
 	rows, err := tx.Query(queryBuffer.String())
-        defer rows.Close()
+	defer rows.Close()
 	if err != nil {
-		fmt.Println("post create err: ", err)
-		fmt.Println(queryBuffer.String())
+		//fmt.Println("post create err: ", err)
+		//fmt.Println(queryBuffer.String())
 		threadMiss = true
 		return
 	}
@@ -83,27 +83,27 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 	for rows.Next() {
 		p := Post{}
 		var msg string
-		err := rows.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &msg, &p.Parent, &p.Thread)
-		fmt.Println("scan err:", err)
+		rows.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &msg, &p.Parent, &p.Thread)
+		//fmt.Println("scan err:", err)
 		p.Message = msg
-		fmt.Println("post crated ok", p)
+		//fmt.Println("post crated ok", p)
 		ps = append(ps, p)
-		fmt.Println("post crated ok", p)
+		//fmt.Println("post crated ok", p)
 	}
 
 	if e := rows.Err(); e != nil {
-		fmt.Println("code scan err code: ", e.(pgx.PgError).Code, e.(pgx.PgError).Code == "23503", "23503")
+		//fmt.Println("code scan err code: ", e.(pgx.PgError).Code, e.(pgx.PgError).Code == "23503", "23503")
 		f := e.(pgx.PgError)
-		fmt.Printf("err: %+v\n%s\n", f, f.ConstraintName)
+		//fmt.Printf("err: %+v\n%s\n", f, f.ConstraintName)
 		if e.(pgx.PgError).Code == "23503" && f.ConstraintName == "posts_author_fkey" {
-			fmt.Println("YA RETURNU!!!")
+			//fmt.Println("YA RETURNU!!!")
 			return false, true, nil
 		}
 		return true, false, nil
 
 	}
-        
-	fmt.Println("posts created: ", ps, queryBuffer.String())
+
+	//fmt.Println("posts created: ", ps, queryBuffer.String())
 	tx.Commit()
 	return
 }
@@ -125,7 +125,7 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 		return
 	}
 	if err != nil {
-		fmt.Println(`getPostsFlat find thread err: `, err)
+		//fmt.Println(`getPostsFlat find thread err: `, err)
 		return
 	}
 
@@ -152,14 +152,14 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 	}
 
 	rows, err := tx.Query(queryBuffer.String())
-        defer rows.Close()
+	defer rows.Close()
 	if err != nil {
-		fmt.Println(`getPostsFlat find posts err: `, err)
-		fmt.Println(`query: `, queryBuffer.String())
+		//fmt.Println(`getPostsFlat find posts err: `, err)
+		//fmt.Println(`query: `, queryBuffer.String())
 		return
 	}
 
-	fmt.Println(`!!!!!!!!!!!!!!!query: `, queryBuffer.String())
+	//fmt.Println(`!!!!!!!!!!!!!!!query: `, queryBuffer.String())
 	ps = make([]Post, 0, 0)
 	for rows.Next() {
 		p := Post{}
@@ -169,7 +169,7 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 			p.Parent = &pa
 		}
 		if err != nil {
-			fmt.Println(`getPostsFlat scan posts err: `, err)
+			//fmt.Println(`getPostsFlat scan posts err: `, err)
 			return nil
 		}
 		ps = append(ps, p)
@@ -194,7 +194,7 @@ func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, dec
 		return
 	}
 	if err != nil {
-		fmt.Println(`GetPostsTree find thread err: `, err)
+		//fmt.Println(`GetPostsTree find thread err: `, err)
 		return
 	}
 
@@ -224,13 +224,13 @@ func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, dec
 	}
 
 	rows, err := tx.Query(queryBuffer.String())
-        defer rows.Close()
+	defer rows.Close()
 	if err != nil {
-		fmt.Println(`GetPostsTree find posts err: `, err)
-		fmt.Println(`query: `, queryBuffer.String())
+		//fmt.Println(`GetPostsTree find posts err: `, err)
+		//fmt.Println(`query: `, queryBuffer.String())
 		return
 	}
-	fmt.Println(`GetPostsTree query: `, queryBuffer.String())
+	//fmt.Println(`GetPostsTree query: `, queryBuffer.String())
 	ps = make([]Post, 0, 0)
 	for rows.Next() {
 		p := Post{}
@@ -240,7 +240,7 @@ func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, dec
 			p.Parent = &pa
 		}
 		if err != nil {
-			fmt.Println(`GetPostsTree scan posts err: `, err)
+			//fmt.Println(`GetPostsTree scan posts err: `, err)
 			return nil
 		}
 		ps = append(ps, p)
@@ -278,7 +278,7 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 		return
 	}
 	if err != nil {
-		fmt.Println(`GetPostsParentTree find thread err: `, err)
+		//fmt.Println(`GetPostsParentTree find thread err: `, err)
 		return
 	}
 	if since != nil {
@@ -286,7 +286,7 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 		var p *int
 		err := row.Scan(&p)
 		if err != nil {
-			fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+			//fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 		} else {
 			if p != nil {
 				*since = *p
@@ -323,9 +323,9 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 			}
 		}
 	}
-        defer rows.Close()
+	defer rows.Close()
 	if err != nil {
-		fmt.Println(`GetPostsParentTree find main posts: `, err)
+		//fmt.Println(`GetPostsParentTree find main posts: `, err)
 		return
 	}
 
@@ -338,12 +338,12 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 
 		if err != nil {
 			rows.Close()
-			fmt.Println(`GetPostsParentTree scan main posts err: `, err)
+			//fmt.Println(`GetPostsParentTree scan main posts err: `, err)
 			return nil
 		}
 		parentPosts = append(parentPosts, p)
 	}
-	
+
 	ps := make([]Post, 0, 0)
 
 	for _, parentPost := range parentPosts {
@@ -351,24 +351,24 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 		rows, err = tx.Query(fmt.Sprintf(getPostsParentTree, parentPost.ID))
 
 		if err != nil {
-			fmt.Println("GetPostsParentTree query to childs err: ", err, "\nquery: ", fmt.Sprintf(getPostsParentTree, parentPost.ID))
+			//fmt.Println("GetPostsParentTree query to childs err: ", err, "\nquery: ", fmt.Sprintf(getPostsParentTree, parentPost.ID))
 		}
-		fmt.Println("GetPostsParentTree query success ")
+		//fmt.Println("GetPostsParentTree query success ")
 		for rows.Next() {
 			p := Post{}
 			err := rows.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &p.Message, &p.Parent, &p.Thread)
-			fmt.Println(`GetPostsParentTree scan posts err: `, err, p)
+			//fmt.Println(`GetPostsParentTree scan posts err: `, err, p)
 			if err != nil {
 				rows.Close()
-				fmt.Println(`GetPostsParentTree scan posts err: `, err)
+				//fmt.Println(`GetPostsParentTree scan posts err: `, err)
 				return nil
 			}
 			ps = append(ps, p)
 		}
-		fmt.Println(len(ps))
+		//fmt.Println(len(ps))
 		rows.Close()
 	}
-	fmt.Println("on final", len(ps))
+	//fmt.Println("on final", len(ps))
 	return ps
 }
 
@@ -397,11 +397,11 @@ func GetPostInfo(id int, needAuthor, needForum, needThread bool) (pi *PostInfo) 
 		&pi.T.Author, &pi.T.Created, &pi.T.Forum, &pi.T.ID, &pi.T.Message, &pi.T.Slug, &pi.T.Title, &pi.T.Votes,
 	)
 	if err == pgx.ErrNoRows {
-		fmt.Println("GetPostInfo post not found")
+		//fmt.Println("GetPostInfo post not found")
 		return nil
 	}
 	if err != nil {
-		fmt.Println("GetPostInfo get post err", err)
+		//fmt.Println("GetPostInfo get post err", err)
 		return nil
 	}
 	if !needAuthor {
@@ -425,7 +425,7 @@ WHERE id = $2
 RETURNING p.author, p.created, p.forum, p.id, p.isEdited, p.message, p.parent, p.thread`
 
 func UpdatePost(id int, msg *string) (p *Post) {
-	fmt.Println("post query: ", p)
+	//fmt.Println("post query: ", p)
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 	row := tx.QueryRow(UpdatePostTpl, msg, id)
@@ -433,14 +433,14 @@ func UpdatePost(id int, msg *string) (p *Post) {
 	p = &Post{}
 	err := row.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &p.Message, &p.Parent, &p.Thread)
 	if err == pgx.ErrNoRows {
-		fmt.Println("UpdatePost post not found")
+		//fmt.Println("UpdatePost post not found")
 		return nil
 	}
 	if err != nil {
-		fmt.Println("UpdatePost upd post err", err)
+		//fmt.Println("UpdatePost upd post err", err)
 		return nil
 	}
 	tx.Commit()
-	fmt.Println("post upd: ", *p)
+	//fmt.Println("post upd: ", *p)
 	return
 }

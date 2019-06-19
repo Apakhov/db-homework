@@ -2,7 +2,6 @@ package models
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -16,7 +15,7 @@ RETURNING *;`
 
 func CreateThread(tdescr *ThreadDescr) (nameMiss bool, slugMiss bool, th Thread, ok bool) {
 	tx, err := conn.Begin()
-	fmt.Println("ne beginknulos:", err)
+	//fmt.Println("ne beginknulos:", err)
 	defer tx.Rollback()
 
 	//checking existense
@@ -26,31 +25,31 @@ func CreateThread(tdescr *ThreadDescr) (nameMiss bool, slugMiss bool, th Thread,
 		nameMiss = true
 		return
 	}
-	fmt.Println("possible err:", err)
+	//fmt.Println("possible err:", err)
 	row = tx.QueryRow("SELECT slug FROM forums WHERE slug = $1;", tdescr.Forum)
 	err = row.Scan(&tdescr.Forum)
 	if err == pgx.ErrNoRows {
 		slugMiss = true
 		return
 	}
-	fmt.Println("possible err:", err)
+	//fmt.Println("possible err:", err)
 
 	row = tx.QueryRow(createThreadTpl, tdescr.Forum, tdescr.Title, tdescr.Created, tdescr.Message, tdescr.Author, tdescr.Slug)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
-	fmt.Println("thread creation err: ", err)
+	//fmt.Println("thread creation err: ", err)
 	if err == nil {
 		tx.Commit()
 		ok = true
 		return
 	}
 	tx.Commit()
-        tx.Rollback()
+	tx.Rollback()
 	tx, _ = conn.Begin()
 	row = tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", tdescr.Slug)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
-	fmt.Println("lol here")
+	//fmt.Println("lol here")
 	if err != nil {
-		fmt.Println("thred conf err: ", err)
+		//fmt.Println("thred conf err: ", err)
 	}
 	return
 
@@ -104,7 +103,7 @@ func GetThreadsByForumSlug(slug *string, limit *int, since *time.Time, desc bool
 	}
 	defer rows.Close()
 	if err != nil {
-		fmt.Println("thread find query err: ", err)
+		//fmt.Println("thread find query err: ", err)
 		return
 	}
 	ths = make([]Thread, 0, 0)
@@ -112,7 +111,7 @@ func GetThreadsByForumSlug(slug *string, limit *int, since *time.Time, desc bool
 	for rows.Next() {
 		th := Thread{}
 		err = rows.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
-		fmt.Println("thread find slug err: ", err)
+		//fmt.Println("thread find slug err: ", err)
 		ths = append(ths, th)
 	}
 
@@ -133,7 +132,7 @@ func VoteID(id int, vote *Vote) (th *Thread) {
 
 	_, err := tx.Exec(voteIDTpl, vote.Nickname, id, vote.Voice)
 	if err != nil {
-		fmt.Println("voting id insert err: ", err)
+		//fmt.Println("voting id insert err: ", err)
 		return
 	}
 
@@ -141,7 +140,7 @@ func VoteID(id int, vote *Vote) (th *Thread) {
 	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE id = $1;", id)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
-		fmt.Println("voting id get thread err: ", err)
+		//fmt.Println("voting id get thread err: ", err)
 	}
 
 	tx.Commit()
@@ -163,7 +162,7 @@ func VoteSlug(slug *string, vote *Vote) (th *Thread) {
 
 	_, err := tx.Exec(voteSlugTpl, vote.Nickname, slug, vote.Voice)
 	if err != nil {
-		fmt.Println("voting slug insert err: ", err)
+		//fmt.Println("voting slug insert err: ", err)
 		return
 	}
 
@@ -171,7 +170,7 @@ func VoteSlug(slug *string, vote *Vote) (th *Thread) {
 	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", slug)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
-		fmt.Println("voting slug get thread err: ", err)
+		//fmt.Println("voting slug get thread err: ", err)
 	}
 	tx.Commit()
 	return
@@ -189,7 +188,7 @@ func UpdateThreadSlug(slug *string, vote *ThreadUPD) (th *Thread) {
 
 	_, err := tx.Exec(UpdateThreadSlugTpl, vote.Message, vote.Title, slug)
 	if err != nil {
-		fmt.Println("upd thread slug insert err: ", err)
+		//fmt.Println("upd thread slug insert err: ", err)
 		return
 	}
 
@@ -197,7 +196,7 @@ func UpdateThreadSlug(slug *string, vote *ThreadUPD) (th *Thread) {
 	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", slug)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
-		fmt.Println("upd thread slug get thread err: ", err)
+		//fmt.Println("upd thread slug get thread err: ", err)
 		return nil
 	}
 	tx.Commit()
@@ -217,7 +216,7 @@ func UpdateThreadID(id *int, vote *ThreadUPD) (th *Thread) {
 
 	_, err := tx.Exec(UpdateThreadIDTpl, vote.Message, vote.Title, id)
 	if err != nil {
-		fmt.Println("upd thread id insert err: ", err)
+		//fmt.Println("upd thread id insert err: ", err)
 		return
 	}
 
@@ -225,7 +224,7 @@ func UpdateThreadID(id *int, vote *ThreadUPD) (th *Thread) {
 	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE id = $1;", id)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
-		fmt.Println("upd thread id get thread err: ", err)
+		//fmt.Println("upd thread id get thread err: ", err)
 		return nil
 	}
 	tx.Commit()
@@ -241,7 +240,7 @@ func GetThreadSlug(slug *string) (th *Thread) {
 	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", slug)
 	err := row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
-		fmt.Println("get thread slug get thread err: ", err)
+		//fmt.Println("get thread slug get thread err: ", err)
 		return nil
 	}
 
@@ -256,7 +255,7 @@ func GetThreadID(id *int) (th *Thread) {
 	row := tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE id = $1;", id)
 	err := row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	if err != nil {
-		fmt.Println("get thread id get thread err: ", err)
+		//fmt.Println("get thread id get thread err: ", err)
 		return nil
 	}
 

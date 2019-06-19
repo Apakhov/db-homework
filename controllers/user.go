@@ -24,7 +24,7 @@ func CreateUser(ctx *fasthttp.RequestCtx) {
 	}
 	resp, _ := json.Marshal(user)
 
-	//fmt.Printf("hello, %s!\n%v\nerr: %s\nresp: %s\n", ctx.UserValue("nickname"), user, err, string(resp))
+	////fmt.Printf("hello, %s!\n%v\nerr: %s\nresp: %s\n", ctx.UserValue("nickname"), user, err, string(resp))
 	ctx.SetStatusCode(fasthttp.StatusCreated)
 	ctx.SetContentType("application/json")
 	ctx.SetBody(resp)

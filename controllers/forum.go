@@ -33,7 +33,7 @@ func CreateForum(ctx *fasthttp.RequestCtx) {
 	}
 	resp, _ := json.Marshal(forum)
 
-	//fmt.Printf("hello, %s!\n%v\nerr: %s\nresp: %s\n", ctx.UserValue("nickname"), user, err, string(resp))
+	////fmt.Printf("hello, %s!\n%v\nerr: %s\nresp: %s\n", ctx.UserValue("nickname"), user, err, string(resp))
 	ctx.SetStatusCode(fasthttp.StatusCreated)
 	ctx.SetContentType("application/json")
 	ctx.SetBody(resp)
@@ -75,7 +75,7 @@ func GetUsers(ctx *fasthttp.RequestCtx) {
 		s := string(args.Peek("since"))
 		since = &s
 	}
-	fmt.Println("sluuuuuuuuuuug:", slug)
+	//fmt.Println("sluuuuuuuuuuug:", slug)
 	us, ok := models.GetUsers(&slug, limit, since, desc)
 	if !ok {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)

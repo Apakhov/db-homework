@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/jackc/pgx"
@@ -25,7 +24,7 @@ func init() {
 		Port:     5432,
 	}
 	var err error
-	fmt.Printf("%+v", config)
+	//fmt.Printf("%+v", config)
 	conn, err = pgx.NewConnPool(pgx.ConnPoolConfig{
 		ConnConfig:     config,
 		MaxConnections: 16,
@@ -54,7 +53,7 @@ func GetInfo() (info *DBInfo) {
 	row := tx.QueryRow(`SELECT forums, posts, threads, users FROM info LIMIT 1;`)
 	err := row.Scan(&info.Forums, &info.Posts, &info.Threads, &info.Users)
 	if err != nil {
-		fmt.Println("get info err:", err)
+		//fmt.Println("get info err:", err)
 		return nil
 	}
 	return
@@ -66,11 +65,11 @@ func Clear() {
 
 	_, err := tx.Exec(clearTpl)
 	if err != nil {
-		fmt.Println("clear err:", err)
+		//fmt.Println("clear err:", err)
 		return
 	}
 	tx.Commit()
-	fmt.Println("cleared")
+	//fmt.Println("cleared")
 }
 
 const clearTpl = `

@@ -14,7 +14,7 @@ func CreatePost(ctx *fasthttp.RequestCtx) {
 	posts := make([]models.PostDescr, 0, 0)
 	err := json.Unmarshal(ctx.PostBody(), &posts)
 	if err != nil {
-		fmt.Println("unmarshal err:", err)
+		//fmt.Println("unmarshal err:", err)
 	}
 	// if len(posts) == 0 {
 	// 	resp, _ := json.Marshal(posts)
@@ -24,7 +24,7 @@ func CreatePost(ctx *fasthttp.RequestCtx) {
 	// 	ctx.SetBody(resp)
 	// 	return
 	// }
-	fmt.Println("posts on query", posts)
+	//fmt.Println("posts on query", posts)
 	slug := ctx.UserValue("slug_or_id").(string)
 	id, err := strconv.Atoi(slug)
 	if err != nil {
@@ -68,7 +68,7 @@ func CreatePost(ctx *fasthttp.RequestCtx) {
 	}
 	resp, _ := json.Marshal(`{teapot:"teapot"}`)
 
-	//fmt.Printf("hello, %s!\n%v\nerr: %s\nresp: %s\n", ctx.UserValue("nickname"), user, err, string(resp))
+	////fmt.Printf("hello, %s!\n%v\nerr: %s\nresp: %s\n", ctx.UserValue("nickname"), user, err, string(resp))
 	ctx.SetStatusCode(fasthttp.StatusTeapot)
 	ctx.SetContentType("plain/text")
 	ctx.SetBody(resp)
@@ -121,11 +121,11 @@ func GetPosts(ctx *fasthttp.RequestCtx) {
 		}
 	}
 	if sort != nil {
-		fmt.Println("sort:asdasdsda: ", *sort, (*sort)[0] == 't', (*sort)[0])
+		//fmt.Println("sort:asdasdsda: ", *sort, (*sort)[0] == 't', (*sort)[0])
 	}
 
 	if ps != nil {
-		fmt.Println("on final contr", len(ps))
+		//fmt.Println("on final contr", len(ps))
 		resp, _ := json.Marshal(ps)
 
 		ctx.SetStatusCode(fasthttp.StatusOK)
@@ -154,7 +154,7 @@ func GetPostInfo(ctx *fasthttp.RequestCtx) {
 	if args.Has("related") {
 		temp := string(args.Peek("related"))
 		related := strings.Split(temp, ",")
-		fmt.Println(temp, related)
+		//fmt.Println(temp, related)
 		for _, r := range related {
 			if !needAuthor && r[0] == 'u' {
 				needAuthor = true

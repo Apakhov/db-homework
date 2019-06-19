@@ -1,8 +1,6 @@
 package models
 
 import (
-	"fmt"
-
 	"github.com/jackc/pgx"
 )
 
@@ -56,7 +54,7 @@ func GetForum(slug string) *Forum {
 func GetUsers(slug *string, limit *int, since *string, desc *bool) (us []User, ok bool) {
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
-        
+
 	row := tx.QueryRow(`SELECT id FROM forums WHERE slug = $1`, *slug)
 	var threadID int
 	err := row.Scan(&threadID)
@@ -64,7 +62,7 @@ func GetUsers(slug *string, limit *int, since *string, desc *bool) (us []User, o
 		return
 	}
 	if err != nil {
-		fmt.Println("GetUsers get forum id err:", err)
+		//fmt.Println("GetUsers get forum id err:", err)
 		return
 	}
 
@@ -127,7 +125,7 @@ func GetUsers(slug *string, limit *int, since *string, desc *bool) (us []User, o
 		}
 	}
 	if err != nil {
-		fmt.Println("GetUsers get users err:", err)
+		//fmt.Println("GetUsers get users err:", err)
 		return
 	}
 	defer rows.Close()
@@ -136,7 +134,7 @@ func GetUsers(slug *string, limit *int, since *string, desc *bool) (us []User, o
 		var u User
 		err = rows.Scan(&u.About, &u.Email, &u.Fullname, &u.Nickname)
 		if err != nil {
-			fmt.Println("GetUsers scan users err:", err)
+			//fmt.Println("GetUsers scan users err:", err)
 			return
 		}
 		us = append(us, u)

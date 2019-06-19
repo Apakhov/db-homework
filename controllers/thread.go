@@ -15,7 +15,7 @@ func CreateTread(ctx *fasthttp.RequestCtx) {
 	json.Unmarshal(ctx.PostBody(), thread)
 	thread.Forum = ctx.UserValue("slug").(string)
 	nameMiss, slugMiss, th, ok := models.CreateThread(thread)
-	fmt.Printf("got from CreateThread\n name: %s\n slug: %s\n thread: %+v\n ok: %v", nameMiss, slugMiss, th, ok)
+	//fmt.Printf("got from CreateThread\n name: %s\n slug: %s\n thread: %+v\n ok: %v", nameMiss, slugMiss, th, ok)
 	if ok {
 		resp, _ := json.Marshal(th)
 
@@ -47,7 +47,7 @@ func CreateTread(ctx *fasthttp.RequestCtx) {
 	}
 	resp, _ := json.Marshal(`{teapot:"teapot"}`)
 
-	//fmt.Printf("hello, %s!\n%v\nerr: %s\nresp: %s\n", ctx.UserValue("nickname"), user, err, string(resp))
+	////fmt.Printf("hello, %s!\n%v\nerr: %s\nresp: %s\n", ctx.UserValue("nickname"), user, err, string(resp))
 	ctx.SetStatusCode(fasthttp.StatusTeapot)
 	ctx.SetContentType("plain/text")
 	ctx.SetBody(resp)
@@ -72,13 +72,13 @@ func GetThreadsByForumSlug(ctx *fasthttp.RequestCtx) {
 		var err error
 		since, err = time.Parse(layout, string(args.Peek("since")))
 		if err != nil {
-			fmt.Println("time parse err:", err)
+			//fmt.Println("time parse err:", err)
 		}
-		fmt.Println("time: ", since)
+		//fmt.Println("time: ", since)
 	}
-	fmt.Printf("!!!!!!!!!!!! %v, %v, %v\n", since, limit, desc)
+	//fmt.Printf("!!!!!!!!!!!! %v, %v, %v\n", since, limit, desc)
 	ths, forumConf, ok := models.GetThreadsByForumSlug(&slug, &limit, &since, desc)
-	fmt.Printf("got from GetThreadsBySlug\n threads: %+v\n ok: %v\n am: %v\n slug: %v\n", ths, ok, len(ths), slug)
+	//fmt.Printf("got from GetThreadsBySlug\n threads: %+v\n ok: %v\n am: %v\n slug: %v\n", ths, ok, len(ths), slug)
 	if forumConf {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		ctx.SetContentType("application/json")
@@ -107,7 +107,7 @@ func Vote(ctx *fasthttp.RequestCtx) {
 	vote := models.Vote{}
 	err := json.Unmarshal(ctx.PostBody(), &vote)
 	if err != nil {
-		fmt.Println("Vote unmarshal err:", err)
+		//fmt.Println("Vote unmarshal err:", err)
 	}
 	slug := ctx.UserValue("slug_or_id").(string)
 	id, err := strconv.Atoi(slug)
@@ -141,7 +141,7 @@ func UpdateThread(ctx *fasthttp.RequestCtx) {
 	thUPD := models.ThreadUPD{}
 	err := json.Unmarshal(ctx.PostBody(), &thUPD)
 	if err != nil {
-		fmt.Println("UpdateThread unmarshal err:", err)
+		//fmt.Println("UpdateThread unmarshal err:", err)
 	}
 	slug := ctx.UserValue("slug_or_id").(string)
 	id, err := strconv.Atoi(slug)
