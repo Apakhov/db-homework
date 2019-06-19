@@ -55,6 +55,8 @@ func GetForum(slug string) *Forum {
 
 func GetUsers(slug *string, limit *int, since *string, desc *bool) (us []User, ok bool) {
 	tx, _ := conn.Begin()
+	defer tx.Rollback()
+        
 	row := tx.QueryRow(`SELECT id FROM forums WHERE slug = $1`, *slug)
 	var threadID int
 	err := row.Scan(&threadID)
