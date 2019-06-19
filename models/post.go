@@ -71,6 +71,7 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 	queryBuffer.WriteString(` RETURNING  author, created, forum, id, isEdited, message, parent, thread;`)
 	fmt.Println("kek query:", queryBuffer.String())
 	rows, err := tx.Query(queryBuffer.String())
+        defer rows.Close()
 	if err != nil {
 		fmt.Println("post create err: ", err)
 		fmt.Println(queryBuffer.String())
@@ -101,7 +102,7 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 		return true, false, nil
 
 	}
-        rows.Close()
+        
 	fmt.Println("posts created: ", ps, queryBuffer.String())
 	tx.Commit()
 	return
@@ -151,6 +152,7 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 	}
 
 	rows, err := tx.Query(queryBuffer.String())
+        defer rows.Close()
 	if err != nil {
 		fmt.Println(`getPostsFlat find posts err: `, err)
 		fmt.Println(`query: `, queryBuffer.String())
@@ -222,6 +224,7 @@ func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, dec
 	}
 
 	rows, err := tx.Query(queryBuffer.String())
+        defer rows.Close()
 	if err != nil {
 		fmt.Println(`GetPostsTree find posts err: `, err)
 		fmt.Println(`query: `, queryBuffer.String())
@@ -320,6 +323,7 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 			}
 		}
 	}
+        defer rows.Close()
 	if err != nil {
 		fmt.Println(`GetPostsParentTree find main posts: `, err)
 		return
@@ -339,7 +343,7 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 		}
 		parentPosts = append(parentPosts, p)
 	}
-	rows.Close()
+	
 	ps := make([]Post, 0, 0)
 
 	for _, parentPost := range parentPosts {
