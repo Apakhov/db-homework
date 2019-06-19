@@ -7,9 +7,16 @@ import (
 	"github.com/jackc/pgx"
 )
 
-var conn *pgx.Conn
+var conn *pgx.ConnPool
 
 func init() {
+	// config := pgx.ConnConfig{
+	// 	Host:     "localhost",
+	// 	User:     "db_user",
+	// 	Password: "1234",
+	// 	Database: "test_base",
+	// 	Port:     5432,
+	// }
 	config := pgx.ConnConfig{
 		Host:     "localhost",
 		User:     "docker",
@@ -19,14 +26,20 @@ func init() {
 	}
 	var err error
 	fmt.Printf("%+v", config)
-	conn, err = pgx.Connect(config)
+	conn, err = pgx.NewConnPool(pgx.ConnPoolConfig{
+		ConnConfig:     config,
+		MaxConnections: 16,
+	})
 	if err != nil {
 		log.Fatalf("cant connest to db 1: %v", err)
 	}
 	log.Println("base up 1")
 	Clear()
 	conn.Close()
-	conn, err = pgx.Connect(config)
+	conn, err = pgx.NewConnPool(pgx.ConnPoolConfig{
+		ConnConfig:     config,
+		MaxConnections: 16,
+	})
 	if err != nil {
 		log.Fatalf("cant connest to db 2: %v", err)
 	}
@@ -57,6 +70,7 @@ func Clear() {
 		return
 	}
 	tx.Commit()
+	fmt.Println("cleared")
 }
 
 const clearTpl = `
