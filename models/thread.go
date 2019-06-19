@@ -44,6 +44,7 @@ func CreateThread(tdescr *ThreadDescr) (nameMiss bool, slugMiss bool, th Thread,
 		return
 	}
 	tx.Commit()
+        tx.Rollback()
 	tx, _ = conn.Begin()
 	row = tx.QueryRow("SELECT author, created, forum, id, message, slug, title, votes FROM threads WHERE slug = $1;", tdescr.Slug)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
