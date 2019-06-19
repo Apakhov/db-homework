@@ -101,6 +101,7 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 		return true, false, nil
 
 	}
+        rows.Close()
 	fmt.Println("posts created: ", ps, queryBuffer.String())
 	tx.Commit()
 	return
