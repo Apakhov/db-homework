@@ -10,13 +10,13 @@ import (
 
 func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bool, threadMiss bool, ps []Post) {
 	tx, _ := conn.Begin()
-	defer tx.Rollback()
 	id := 0
 	forum := ""
 	if threadSlug != nil {
 		//fmt.Println("finding by slug")
 		row := tx.QueryRow("SELECT id, forum FROM threads WHERE slug = $1;", *threadSlug)
 		if row.Scan(&id, &forum) != nil {
+			tx.Rollback()
 			return false, true, nil
 		}
 	} else {
@@ -25,9 +25,11 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 		err := row.Scan(&id, &forum)
 		if err != nil {
 			//fmt.Println("id thread not found:", err)
+			tx.Rollback()
 			return false, true, nil
 		}
 	}
+	tx.Rollback()
 	if len(pdescrs) == 0 {
 		//fmt.Println("zero posts got")
 		return false, false, make([]Post, 0, 0)
@@ -70,6 +72,8 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 	}
 	queryBuffer.WriteString(` RETURNING  author, created, forum, id, isEdited, message, parent, thread;`)
 	//fmt.Println("kek query:", queryBuffer.String())
+	tx, _ = conn.Begin()
+	defer tx.Rollback()
 	rows, err := tx.Query(queryBuffer.String())
 	defer rows.Close()
 	if err != nil {
