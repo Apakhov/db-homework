@@ -11,7 +11,7 @@ import (
 )
 
 func CreatePost(ctx *fasthttp.RequestCtx) {
-	posts := make([]models.PostDescr, 0, 0)
+	posts := make([]models.Post, 0, 0)
 	err := json.Unmarshal(ctx.PostBody(), &posts)
 	if err != nil {
 		//fmt.Println("unmarshal err:", err)

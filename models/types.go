@@ -50,12 +50,6 @@ type ThreadUPD struct {
 	Title   string `json:"title"`
 }
 
-type PostDescr struct {
-	Author  string `json:"author"`
-	Message string `json:"message"`
-	Parent  *int   `json:"parent"`
-}
-
 type Post struct {
 	Author   string    `json:"author"`
 	Created  time.Time `json:"created"`

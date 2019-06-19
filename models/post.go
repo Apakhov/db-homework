@@ -8,15 +8,68 @@ import (
 	"github.com/jackc/pgx"
 )
 
-func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bool, threadMiss bool, ps []Post) {
+type Buffers struct {
+	block chan struct{}
+	bufs  map[int]*struct {
+		buf  *bytes.Buffer
+		busy bool
+	}
+	cur int
+}
+
+func (bs *Buffers) get() (int, *bytes.Buffer) {
+	bs.block <- struct{}{}
+	//fmt.Println("search")
+	for i, b := range bs.bufs {
+		//fmt.Println("next")
+		if !b.busy {
+			b.buf.Reset()
+			b.busy = true
+			<-bs.block
+			return i, b.buf
+		}
+	}
+	fmt.Println("NEW", bs.cur)
+	bs.cur++
+	fmt.Println(bs.cur)
+	i := bs.cur
+	n := &struct {
+		buf  *bytes.Buffer
+		busy bool
+	}{bytes.NewBuffer(make([]byte, 100)), true}
+	n.buf.Reset()
+	bs.bufs[i] = n
+	<-bs.block
+	return i, n.buf
+}
+
+func (bs *Buffers) back(i int) {
+	bs.block <- struct{}{}
+	bs.bufs[i].busy = false
+	<-bs.block
+}
+
+var bs *Buffers
+
+func init() {
+	bs = &Buffers{
+		block: make(chan struct{}, 1),
+		bufs: make(map[int]*struct {
+			buf  *bytes.Buffer
+			busy bool
+		}),
+	}
+}
+
+func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, threadMiss bool, ps []Post) {
 	tx, _ := conn.Begin()
+	defer tx.Rollback()
 	id := 0
 	forum := ""
 	if threadSlug != nil {
 		//fmt.Println("finding by slug")
 		row := tx.QueryRow("SELECT id, forum FROM threads WHERE slug = $1;", *threadSlug)
 		if row.Scan(&id, &forum) != nil {
-			tx.Rollback()
 			return false, true, nil
 		}
 	} else {
@@ -25,90 +78,57 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []PostDescr) (conf bo
 		err := row.Scan(&id, &forum)
 		if err != nil {
 			//fmt.Println("id thread not found:", err)
-			tx.Rollback()
 			return false, true, nil
 		}
 	}
-	tx.Rollback()
 	if len(pdescrs) == 0 {
 		//fmt.Println("zero posts got")
 		return false, false, make([]Post, 0, 0)
 	}
-	var queryBuffer bytes.Buffer
-	queryBuffer.WriteString("INSERT INTO posts (author, forum, message, thread, parent, path) VALUES")
-	l := len(pdescrs) - 1
+
+	ps = pdescrs
+
 	for i, pdescr := range pdescrs {
 		var parentID string
 		if pdescr.Parent != nil {
 			parentID = strconv.Itoa(*pdescr.Parent)
 		}
-		queryBuffer.WriteString(`('`)
-		queryBuffer.WriteString(pdescr.Author)
-		queryBuffer.WriteString(`', '`)
-		queryBuffer.WriteString(forum)
-		queryBuffer.WriteString(`', '`)
-		queryBuffer.WriteString(pdescr.Message)
-		queryBuffer.WriteString(`', `)
-		queryBuffer.WriteString(strconv.Itoa(id))
-		queryBuffer.WriteString(`,`)
+		//fmt.Println("QUERY:::", queryBuffer.String())
+		var row *pgx.Row
 		if pdescr.Parent == nil || *pdescr.Parent <= 0 {
-			queryBuffer.WriteString(` NULL `)
+			row = tx.QueryRow(`INSERT INTO posts (author, forum, message, thread, parent, path) VALUES
+			( $1, $2, $3, $4, NULL, '{}' ) RETURNING  author, created, forum, id, isEdited, message, parent, thread;`,
+				pdescr.Author, forum, pdescr.Message, strconv.Itoa(id))
 		} else {
-			queryBuffer.WriteString(parentID)
+			row = tx.QueryRow(`INSERT INTO posts (author, forum, message, thread, parent, path) VALUES 
+			( $1, $2, $3, $4, $5, CAST ((SELECT path FROM posts WHERE id = $6) AS BIGINT[]) || $6 ) RETURNING  author, created, forum, id, isEdited, message, parent, thread;`,
+				pdescr.Author, forum, pdescr.Message, strconv.Itoa(id), parentID, pdescr.Parent)
 		}
-		queryBuffer.WriteString(`,`)
-		if pdescr.Parent == nil || *pdescr.Parent <= 0 {
-			queryBuffer.WriteString(`'{}'`)
-		} else {
-			queryBuffer.WriteString(`(SELECT path FROM posts WHERE id = `)
-			queryBuffer.WriteString(parentID)
-			queryBuffer.WriteString(`) || `)
-			queryBuffer.WriteString(parentID)
-		}
-		queryBuffer.WriteByte(')')
-		if i < l {
-			queryBuffer.WriteByte(',')
-		}
-	}
-	queryBuffer.WriteString(` RETURNING  author, created, forum, id, isEdited, message, parent, thread;`)
-	//fmt.Println("kek query:", queryBuffer.String())
-	tx, _ = conn.Begin()
-	defer tx.Rollback()
-	rows, err := tx.Query(queryBuffer.String())
-	defer rows.Close()
-	if err != nil {
-		//fmt.Println("post create err: ", err)
-		//fmt.Println(queryBuffer.String())
-		threadMiss = true
-		return
-	}
 
-	ps = make([]Post, 0, 0)
-	for rows.Next() {
-		p := Post{}
+		p := &ps[i]
 		var msg string
-		rows.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &msg, &p.Parent, &p.Thread)
+		err := row.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &msg, &p.Parent, &p.Thread)
+		if err != nil {
+			//fmt.Println("post create err: ", err)
+			//fmt.Println(queryBuffer.String())
+			fmt.Println("ERROR::::", err.Error())
+			f := err.(pgx.PgError)
+			//fmt.Printf("err: %+v\n%s\n", f, f.ConstraintName)
+			if f.Code == "23503" && f.ConstraintName == "posts_author_fkey" {
+				//fmt.Println("YA RETURNU!!!")
+				return false, true, nil
+			}
+			return true, false, nil
+		}
 		//fmt.Println("scan err:", err)
 		p.Message = msg
 		//fmt.Println("post crated ok", p)
-		ps = append(ps, p)
-		//fmt.Println("post crated ok", p)
 	}
-
-	if e := rows.Err(); e != nil {
-		//fmt.Println("code scan err code: ", e.(pgx.PgError).Code, e.(pgx.PgError).Code == "23503", "23503")
-		f := e.(pgx.PgError)
-		//fmt.Printf("err: %+v\n%s\n", f, f.ConstraintName)
-		if e.(pgx.PgError).Code == "23503" && f.ConstraintName == "posts_author_fkey" {
-			//fmt.Println("YA RETURNU!!!")
-			return false, true, nil
-		}
-		return true, false, nil
-
-	}
+	//fmt.Println("kek query:", queryBuffer.String())
 
 	//fmt.Println("posts created: ", ps, queryBuffer.String())
 	tx.Commit()
+
 	return
 }
 
