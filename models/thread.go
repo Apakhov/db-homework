@@ -37,6 +37,8 @@ func CreateThread(tdescr *ThreadDescr) (nameMiss bool, slugMiss bool, th Thread,
 	row = tx.QueryRow(createThreadTpl, tdescr.Forum, tdescr.Title, tdescr.Created, tdescr.Message, tdescr.Author, tdescr.Slug)
 	err = row.Scan(&th.Author, &th.Created, &th.Forum, &th.ID, &th.Message, &th.Slug, &th.Title, &th.Votes)
 	//fmt.Println("thread creation err: ", err)
+	//fmt.Println("thread creation err: ", err, th)
+
 	if err == nil {
 		tx.Commit()
 		ok = true
@@ -51,6 +53,8 @@ func CreateThread(tdescr *ThreadDescr) (nameMiss bool, slugMiss bool, th Thread,
 	if err != nil {
 		//fmt.Println("thred conf err: ", err)
 	}
+	tx.Rollback()
+
 	return
 
 }

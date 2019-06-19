@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgx"
@@ -9,20 +10,20 @@ import (
 var conn *pgx.ConnPool
 
 func init() {
-	// config := pgx.ConnConfig{
-	// 	Host:     "localhost",
-	// 	User:     "db_user",
-	// 	Password: "1234",
-	// 	Database: "test_base",
-	// 	Port:     5432,
-	// }
 	config := pgx.ConnConfig{
 		Host:     "localhost",
-		User:     "docker",
-		Password: "docker",
-		Database: "docker",
+		User:     "db_user",
+		Password: "1234",
+		Database: "test_base",
 		Port:     5432,
 	}
+	// config := pgx.ConnConfig{
+	// 	Host:     "localhost",
+	// 	User:     "docker",
+	// 	Password: "docker",
+	// 	Database: "docker",
+	// 	Port:     5432,
+	// }
 	var err error
 	//fmt.Printf("%+v", config)
 	conn, err = pgx.NewConnPool(pgx.ConnPoolConfig{
@@ -37,7 +38,7 @@ func init() {
 	conn.Close()
 	conn, err = pgx.NewConnPool(pgx.ConnPoolConfig{
 		ConnConfig:     config,
-		MaxConnections: 16,
+		MaxConnections: 24,
 	})
 	if err != nil {
 		log.Fatalf("cant connest to db 2: %v", err)
@@ -60,10 +61,12 @@ func GetInfo() (info *DBInfo) {
 }
 
 func Clear() {
+	fmt.Printf("%+v", conn.Stat())
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
-
+	fmt.Println("clearing")
 	_, err := tx.Exec(clearTpl)
+	fmt.Println("cleared")
 	if err != nil {
 		//fmt.Println("clear err:", err)
 		return
