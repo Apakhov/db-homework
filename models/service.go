@@ -66,7 +66,7 @@ func Clear() {
 	defer tx.Rollback()
 	fmt.Println("clearing")
 	_, err := tx.Exec(clearTpl)
-	fmt.Println("cleared")
+	fmt.Println("cleared", err)
 	if err != nil {
 		//fmt.Println("clear err:", err)
 		return
@@ -110,8 +110,8 @@ CREATE TABLE threads (
   votes INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE INDEX threads_id_ind ON threads USING B-TREE (id);
-CREATE INDEX threads_slug_ind ON threads USING B-TREE (slug);
+CREATE INDEX threads_id_ind ON threads USING BTREE (id);
+CREATE INDEX threads_slug_ind ON threads USING BTREE (slug);
 
 
 DROP TABLE IF EXISTS users_threads CASCADE;
@@ -136,8 +136,8 @@ CREATE TABLE posts (
   path integer[] NOT NULL
 );
 
-CREATE INDEX posts_path_ind ON posts USING B-TREE (path);
-CREATE INDEX posts_id_ind ON posts USING B-TREE (id);
+CREATE INDEX posts_path_ind ON posts USING BTREE (path);
+CREATE INDEX posts_id_ind ON posts USING BTREE (id);
 
 
 
