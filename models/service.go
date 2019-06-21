@@ -15,6 +15,7 @@ var (
 	threadsCt = 0
 	usersCt   = 0
 	ctCh      = make(chan struct{}, 1)
+	am        = int64(0)
 )
 
 func init() {
@@ -66,6 +67,14 @@ func GetInfo() (info *DBInfo) {
 }
 
 func Clear() {
+	go func() {
+		ctCh <- struct{}{}
+		forumsCt = 0
+		postsCt = 0
+		threadsCt = 0
+		usersCt = 0
+		<-ctCh
+	}()
 	fmt.Printf("%+v", conn.Stat())
 	tx, _ := conn.Begin()
 	defer tx.Rollback()

@@ -1,6 +1,8 @@
 package models
 
 import (
+	"sync/atomic"
+
 	"github.com/jackc/pgx"
 )
 
@@ -15,9 +17,12 @@ WHERE slug = $1;`
 
 func CreateForum(fdescr *ForumDescr) (*Forum, *string) {
 	go func() {
+		//atomic.AddInt64(&am, 1)
+		//fmt.Println(am)
 		ctCh <- struct{}{}
 		forumsCt++
 		<-ctCh
+		atomic.AddInt64(&am, -1)
 	}()
 	//fmt.Println("forum", fdescr.Slug, "creating")
 	tx, _ := conn.Begin()
