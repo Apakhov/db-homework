@@ -14,6 +14,11 @@ INSERT INTO threads (forum, title, created, message, author, slug) VALUES
 RETURNING *;`
 
 func CreateThread(tdescr *ThreadDescr) (nameMiss bool, slugMiss bool, th Thread, ok bool) {
+	go func() {
+		ctCh <- struct{}{}
+		threadsCt++
+		<-ctCh
+	}()
 	tx, err := conn.Begin()
 	//fmt.Println("ne beginknulos:", err)
 	defer tx.Rollback()

@@ -9,6 +9,14 @@ import (
 
 var conn *pgx.ConnPool
 
+var (
+	forumsCt  = 0
+	postsCt   = 0
+	threadsCt = 0
+	usersCt   = 0
+	ctCh      = make(chan struct{}, 1)
+)
+
 func init() {
 	// config := pgx.ConnConfig{
 	// 	Host:     "localhost",
@@ -47,16 +55,13 @@ func init() {
 }
 
 func GetInfo() (info *DBInfo) {
-	tx, _ := conn.Begin()
-	defer tx.Rollback()
-
-	info = &DBInfo{}
-	row := tx.QueryRow(`SELECT forums, posts, threads, users FROM info LIMIT 1;`)
-	err := row.Scan(&info.Forums, &info.Posts, &info.Threads, &info.Users)
-	if err != nil {
-		//fmt.Println("get info err:", err)
-		return nil
+	info = &DBInfo{
+		Forums:  forumsCt,
+		Posts:   postsCt,
+		Users:   usersCt,
+		Threads: threadsCt,
 	}
+
 	return
 }
 
@@ -137,8 +142,7 @@ CREATE TABLE posts (
 );
 
 CREATE INDEX posts_path_ind ON posts USING BTREE (path);
-CREATE INDEX posts_id_ind ON posts USING BTREE (id);
-
+CREATE INDEX posts_id_ind ON posts USING BTREE (id,thread);
 
 
 DROP TABLE IF EXISTS users_forums CASCADE;
@@ -168,7 +172,7 @@ BEGIN
     IF new.parent IS NULL THEN
       return NULL;
     END IF;
-    if NOT EXISTS(SELECT * FROM posts WHERE id = new.parent AND thread = new.thread) THEN
+    if NOT EXISTS(SELECT id FROM posts WHERE id = new.parent AND thread = new.thread LIMIT 1) THEN
       RAISE 'bred';
     end if;
     RETURN NULL;
@@ -283,67 +287,5 @@ COMMIT;
 
 
 
-BEGIN TRANSACTION;
-DROP TRIGGER IF EXISTS info_forums_inc ON info;
-DROP FUNCTION IF EXISTS info_forums_inc();
-CREATE OR REPLACE FUNCTION info_forums_inc() RETURNS trigger AS $$
-BEGIN
-    UPDATE info
-      SET forums = forums + 1;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER info_forums_inc AFTER INSERT ON forums
-    FOR EACH ROW EXECUTE PROCEDURE info_forums_inc();
-COMMIT;
-
-
-BEGIN TRANSACTION;
-DROP TRIGGER IF EXISTS info_posts_inc ON info;
-DROP FUNCTION IF EXISTS info_posts_inc();
-CREATE OR REPLACE FUNCTION info_posts_inc() RETURNS trigger AS $$
-BEGIN
-    UPDATE info
-      SET posts = posts + 1;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER info_posts_inc AFTER INSERT ON posts
-    FOR EACH ROW EXECUTE PROCEDURE info_posts_inc();
-COMMIT;
-
-
-BEGIN TRANSACTION;
-DROP TRIGGER IF EXISTS info_threads_inc ON info;
-DROP FUNCTION IF EXISTS info_threads_inc();
-CREATE OR REPLACE FUNCTION info_threads_inc() RETURNS trigger AS $$
-BEGIN
-    UPDATE info
-      SET threads = threads + 1;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-
-CREATE TRIGGER info_threads_inc AFTER INSERT ON threads
-    FOR EACH ROW EXECUTE PROCEDURE info_threads_inc();
-COMMIT;
-
-
-BEGIN TRANSACTION;
-DROP TRIGGER IF EXISTS info_users_inc ON info;
-DROP FUNCTION IF EXISTS info_users_inc();
-CREATE OR REPLACE FUNCTION info_users_inc() RETURNS trigger AS $$
-BEGIN
-    UPDATE info
-      SET users = users + 1;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER info_users_inc AFTER INSERT ON users
-    FOR EACH ROW EXECUTE PROCEDURE info_users_inc();
-COMMIT;
 `

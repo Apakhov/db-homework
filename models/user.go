@@ -9,6 +9,11 @@ insert into users (about, email, fullname, nickname)
 values($1, $2, $3, $4)`
 
 func CreateUser(user *User) []User {
+	go func() {
+		ctCh <- struct{}{}
+		usersCt++
+		<-ctCh
+	}()
 	users := make([]User, 0, 0)
 	_, err := conn.Exec(createUserTpl, user.About, user.Email, user.Fullname, user.Nickname)
 	if err != nil {

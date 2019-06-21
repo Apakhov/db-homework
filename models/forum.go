@@ -14,6 +14,11 @@ SELECT posts, slug, threads, title, author FROM forums
 WHERE slug = $1;`
 
 func CreateForum(fdescr *ForumDescr) (*Forum, *string) {
+	go func() {
+		ctCh <- struct{}{}
+		forumsCt++
+		<-ctCh
+	}()
 	//fmt.Println("forum", fdescr.Slug, "creating")
 	tx, _ := conn.Begin()
 	defer tx.Rollback()

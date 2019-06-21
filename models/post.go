@@ -62,6 +62,11 @@ func init() {
 }
 
 func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, threadMiss bool, ps []Post) {
+	go func() {
+		ctCh <- struct{}{}
+		postsCt += len(pdescrs)
+		<-ctCh
+	}()
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 	id := 0
