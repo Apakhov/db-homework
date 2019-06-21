@@ -14,6 +14,7 @@ SELECT posts, slug, threads, title, author FROM forums
 WHERE slug = $1;`
 
 func CreateForum(fdescr *ForumDescr) (*Forum, *string) {
+	//fmt.Println("forum", fdescr.Slug, "creating")
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -41,6 +42,7 @@ SELECT posts, slug, threads, title, author FROM forums
 WHERE slug = $1`
 
 func GetForum(slug string) *Forum {
+	//fmt.Println("forum", slug, "getting")
 	rows, _ := conn.Query(getForumTpl, slug)
 	defer rows.Close()
 	if rows.Next() {

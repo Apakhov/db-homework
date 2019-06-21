@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx"
 )
@@ -87,7 +88,6 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, t
 	}
 
 	ps = pdescrs
-
 	for i, pdescr := range pdescrs {
 		var parentID string
 		if pdescr.Parent != nil {
@@ -95,23 +95,27 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, t
 		}
 		//fmt.Println("QUERY:::", queryBuffer.String())
 		var row *pgx.Row
+		if !pdescr.Created.IsZero() {
+			pdescr.Created = time.Now()
+		}
+		// PostgreSQL считает с точностью до MS
+		pdescr.Created = pdescr.Created.Round(time.Millisecond)
 		if pdescr.Parent == nil || *pdescr.Parent <= 0 {
-			row = tx.QueryRow(`INSERT INTO posts (author, forum, message, thread, parent, path) VALUES
-			( $1, $2, $3, $4, NULL, '{}' ) RETURNING  author, created, forum, id, isEdited, message, parent, thread;`,
-				pdescr.Author, forum, pdescr.Message, strconv.Itoa(id))
+			row = tx.QueryRow(`INSERT INTO posts (author, forum, message, thread, parent, path, created) VALUES
+			( $1, $2, $3, $4, NULL, '{}', $5) RETURNING  id;`,
+				pdescr.Author, forum, pdescr.Message, strconv.Itoa(id), pdescr.Created)
 		} else {
-			row = tx.QueryRow(`INSERT INTO posts (author, forum, message, thread, parent, path) VALUES 
-			( $1, $2, $3, $4, $5, CAST ((SELECT path FROM posts WHERE id = $6) AS BIGINT[]) || $6 ) RETURNING  author, created, forum, id, isEdited, message, parent, thread;`,
-				pdescr.Author, forum, pdescr.Message, strconv.Itoa(id), parentID, pdescr.Parent)
+			row = tx.QueryRow(`INSERT INTO posts (author, forum, message, thread, parent, path, created) VALUES 
+			( $1, $2, $3, $4, $5, CAST ((SELECT path FROM posts WHERE id = $6) AS BIGINT[]) || $6 , $7) RETURNING  id;`,
+				pdescr.Author, forum, pdescr.Message, strconv.Itoa(id), parentID, pdescr.Parent, pdescr.Created)
 		}
 
 		p := &ps[i]
-		var msg string
-		err := row.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &msg, &p.Parent, &p.Thread)
+		err := row.Scan(&p.ID)
 		if err != nil {
 			//fmt.Println("post create err: ", err)
 			//fmt.Println(queryBuffer.String())
-			fmt.Println("ERROR::::", err.Error())
+			//fmt.Println("ERROR::::", err.Error())
 			f := err.(pgx.PgError)
 			//fmt.Printf("err: %+v\n%s\n", f, f.ConstraintName)
 			if f.Code == "23503" && f.ConstraintName == "posts_author_fkey" {
@@ -120,8 +124,11 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, t
 			}
 			return true, false, nil
 		}
+		//author, created, forum, id, isEdited, message, parent, thread
 		//fmt.Println("scan err:", err)
-		p.Message = msg
+
+		p.Forum = forum
+		p.Thread = id
 		//fmt.Println("post crated ok", p)
 	}
 	//fmt.Println("kek query:", queryBuffer.String())

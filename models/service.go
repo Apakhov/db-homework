@@ -10,20 +10,20 @@ import (
 var conn *pgx.ConnPool
 
 func init() {
-	// config := pgx.ConnConfig{
-	// 	Host:     "localhost",
-	// 	User:     "db_user",
-	// 	Password: "1234",
-	// 	Database: "test_base",
-	// 	Port:     5432,
-	// }
 	config := pgx.ConnConfig{
 		Host:     "localhost",
-		User:     "docker",
-		Password: "docker",
-		Database: "docker",
+		User:     "db_user",
+		Password: "1234",
+		Database: "test_base",
 		Port:     5432,
 	}
+	// config := pgx.ConnConfig{
+	// 	Host:     "localhost",
+	// 	User:     "docker",
+	// 	Password: "docker",
+	// 	Database: "docker",
+	// 	Port:     5432,
+	// }
 	var err error
 	//fmt.Printf("%+v", config)
 	conn, err = pgx.NewConnPool(pgx.ConnPoolConfig{
@@ -110,6 +110,10 @@ CREATE TABLE threads (
   votes INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE INDEX threads_id_ind ON threads USING B-TREE (id);
+CREATE INDEX threads_slug_ind ON threads USING B-TREE (slug);
+
+
 DROP TABLE IF EXISTS users_threads CASCADE;
 CREATE TABLE users_threads(
   nickname CITEXT NOT NULL REFERENCES users(nickname) ON DELETE CASCADE ,
@@ -132,6 +136,8 @@ CREATE TABLE posts (
   path integer[] NOT NULL
 );
 
+CREATE INDEX posts_path_ind ON posts USING B-TREE (path);
+CREATE INDEX posts_id_ind ON posts USING B-TREE (id);
 
 
 
