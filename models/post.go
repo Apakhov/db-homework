@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/jackc/pgx"
 )
@@ -88,54 +87,63 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, t
 	}
 
 	ps = pdescrs
+	bufNum, buf := bs.get()
+	//fmt.Println(bufNum)
+	buf.WriteString("INSERT INTO posts (author, forum, message, thread, parent, path) VALUES")
+
 	for i, pdescr := range pdescrs {
-		var parentID string
-		if pdescr.Parent != nil {
-			parentID = strconv.Itoa(*pdescr.Parent)
-		}
-		//fmt.Println("QUERY:::", queryBuffer.String())
-		var row *pgx.Row
-		if !pdescr.Created.IsZero() {
-			pdescr.Created = time.Now()
-		}
-		// PostgreSQL считает с точностью до MS
-		pdescr.Created = pdescr.Created.Round(time.Millisecond)
+
 		if pdescr.Parent == nil || *pdescr.Parent <= 0 {
-			row = tx.QueryRow(`INSERT INTO posts (author, forum, message, thread, parent, path, created) VALUES
-			( $1, $2, $3, $4, NULL, '{}', $5) RETURNING  id;`,
-				pdescr.Author, forum, pdescr.Message, strconv.Itoa(id), pdescr.Created)
+			buf.WriteString(fmt.Sprintf("('%s', '%s', '%s', %d, NULL ,'{}')",
+				pdescr.Author, forum, pdescr.Message, id))
 		} else {
-			row = tx.QueryRow(`INSERT INTO posts (author, forum, message, thread, parent, path, created) VALUES 
-			( $1, $2, $3, $4, $5, CAST ((SELECT path FROM posts WHERE id = $6) AS BIGINT[]) || $6 , $7) RETURNING  id;`,
-				pdescr.Author, forum, pdescr.Message, strconv.Itoa(id), parentID, pdescr.Parent, pdescr.Created)
+			buf.WriteString(fmt.Sprintf("('%s', '%s', '%s', %d,%d,(SELECT path FROM posts WHERE id = %d) || %d)",
+				pdescr.Author, forum, pdescr.Message, id, *pdescr.Parent, *pdescr.Parent, *pdescr.Parent))
+		}
+		if i < len(pdescrs)-1 {
+			buf.WriteByte(',')
 		}
 
-		p := &ps[i]
-		err := row.Scan(&p.ID)
-		if err != nil {
-			//fmt.Println("post create err: ", err)
-			//fmt.Println(queryBuffer.String())
-			//fmt.Println("ERROR::::", err.Error())
-			f := err.(pgx.PgError)
-			//fmt.Printf("err: %+v\n%s\n", f, f.ConstraintName)
-			if f.Code == "23503" && f.ConstraintName == "posts_author_fkey" {
-				//fmt.Println("YA RETURNU!!!")
-				return false, true, nil
-			}
-			return true, false, nil
-		}
-		//author, created, forum, id, isEdited, message, parent, thread
-		//fmt.Println("scan err:", err)
+		ps[i].Forum = forum
+		ps[i].Thread = id
 
-		p.Forum = forum
-		p.Thread = id
-		//fmt.Println("post crated ok", p)
 	}
-	//fmt.Println("kek query:", queryBuffer.String())
 
-	//fmt.Println("posts created: ", ps, queryBuffer.String())
+	buf.WriteString(` RETURNING  created, id;`)
+
+	rows, err := tx.Query(buf.String())
+	bs.back(bufNum)
+	defer rows.Close()
+	if err != nil {
+		//fmt.Println("post create err: ", err)
+		//fmt.Println(buf.String())
+		threadMiss = true
+		return
+	}
+
+	ps = pdescrs
+	i := 0
+	for rows.Next() {
+		//		rows.Scan(&ps[i].ID, &ps[i].Created)
+		rows.Scan(&ps[i].Created, &ps[i].ID)
+
+		i++
+	}
+
+	if e := rows.Err(); e != nil {
+		//fmt.Println("code scan err code: ", e.(pgx.PgError).Code, e.(pgx.PgError).Code == "23503", "23503")
+		f := e.(pgx.PgError)
+		//fmt.Printf("err: %+v\n%s\n", f, f.ConstraintName)
+		if e.(pgx.PgError).Code == "23503" && f.ConstraintName == "posts_author_fkey" {
+			//fmt.Println("YA RETURNU!!!")
+			return false, true, nil
+		}
+		return true, false, nil
+
+	}
+
+	//fmt.Println("posts created: ", ps, buf.String())
 	tx.Commit()
-
 	return
 }
 
@@ -160,37 +168,37 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 		return
 	}
 
-	var queryBuffer bytes.Buffer
+	var buf bytes.Buffer
 
-	queryBuffer.WriteString(`SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts WHERE thread = `)
-	queryBuffer.WriteString(strconv.Itoa(*threadID))
+	buf.WriteString(`SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts WHERE thread = `)
+	buf.WriteString(strconv.Itoa(*threadID))
 	if since != nil {
 		if deck {
-			queryBuffer.WriteString(` AND id < `)
-			queryBuffer.WriteString(strconv.Itoa(*since))
+			buf.WriteString(` AND id < `)
+			buf.WriteString(strconv.Itoa(*since))
 		} else {
-			queryBuffer.WriteString(` AND id > `)
-			queryBuffer.WriteString(strconv.Itoa(*since))
+			buf.WriteString(` AND id > `)
+			buf.WriteString(strconv.Itoa(*since))
 		}
 	}
-	queryBuffer.WriteString(` ORDER BY id `)
+	buf.WriteString(` ORDER BY id `)
 	if deck {
-		queryBuffer.WriteString(`DESC `)
+		buf.WriteString(`DESC `)
 	}
 	if limit != nil {
-		queryBuffer.WriteString(`LIMIT `)
-		queryBuffer.WriteString(strconv.Itoa(*limit))
+		buf.WriteString(`LIMIT `)
+		buf.WriteString(strconv.Itoa(*limit))
 	}
 
-	rows, err := tx.Query(queryBuffer.String())
+	rows, err := tx.Query(buf.String())
 	defer rows.Close()
 	if err != nil {
 		//fmt.Println(`getPostsFlat find posts err: `, err)
-		//fmt.Println(`query: `, queryBuffer.String())
+		//fmt.Println(`query: `, buf.String())
 		return
 	}
 
-	//fmt.Println(`!!!!!!!!!!!!!!!query: `, queryBuffer.String())
+	//fmt.Println(`!!!!!!!!!!!!!!!query: `, buf.String())
 	ps = make([]Post, 0, 0)
 	for rows.Next() {
 		p := Post{}
@@ -229,39 +237,39 @@ func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, dec
 		return
 	}
 
-	var queryBuffer bytes.Buffer
+	var buf bytes.Buffer
 
-	queryBuffer.WriteString(`SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts
+	buf.WriteString(`SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts
 	WHERE thread = `)
-	queryBuffer.WriteString(strconv.Itoa(*threadID))
+	buf.WriteString(strconv.Itoa(*threadID))
 	if since != nil {
 		if deck {
-			queryBuffer.WriteString(` AND (path || id::INTEGER) < (SELECT path || id::INTEGER from posts WHERE id = `)
-			queryBuffer.WriteString(strconv.Itoa(*since))
-			queryBuffer.WriteString(`)`)
+			buf.WriteString(` AND (path || id::INTEGER) < (SELECT path || id::INTEGER from posts WHERE id = `)
+			buf.WriteString(strconv.Itoa(*since))
+			buf.WriteString(`)`)
 		} else {
-			queryBuffer.WriteString(` AND (path || id::INTEGER) > (SELECT path || id::INTEGER from posts WHERE id = `)
-			queryBuffer.WriteString(strconv.Itoa(*since))
-			queryBuffer.WriteString(`)`)
+			buf.WriteString(` AND (path || id::INTEGER) > (SELECT path || id::INTEGER from posts WHERE id = `)
+			buf.WriteString(strconv.Itoa(*since))
+			buf.WriteString(`)`)
 		}
 	}
-	queryBuffer.WriteString(` ORDER BY path || id::INTEGER `)
+	buf.WriteString(` ORDER BY path || id::INTEGER `)
 	if deck {
-		queryBuffer.WriteString(`DESC `)
+		buf.WriteString(`DESC `)
 	}
 	if limit != nil {
-		queryBuffer.WriteString(`LIMIT `)
-		queryBuffer.WriteString(strconv.Itoa(*limit))
+		buf.WriteString(`LIMIT `)
+		buf.WriteString(strconv.Itoa(*limit))
 	}
 
-	rows, err := tx.Query(queryBuffer.String())
+	rows, err := tx.Query(buf.String())
 	defer rows.Close()
 	if err != nil {
 		//fmt.Println(`GetPostsTree find posts err: `, err)
-		//fmt.Println(`query: `, queryBuffer.String())
+		//fmt.Println(`query: `, buf.String())
 		return
 	}
-	//fmt.Println(`GetPostsTree query: `, queryBuffer.String())
+	//fmt.Println(`GetPostsTree query: `, buf.String())
 	ps = make([]Post, 0, 0)
 	for rows.Next() {
 		p := Post{}
