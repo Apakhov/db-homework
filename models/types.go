@@ -1,6 +1,7 @@
 package models
 
 import (
+	"sync"
 	"time"
 )
 
@@ -78,4 +79,43 @@ type DBInfo struct {
 	Posts   int `json:"post"`
 	Threads int `json:"thread"`
 	Users   int `json:"user"`
+}
+
+var (
+	timerMutex   = sync.Mutex{}
+	timerCounter = make(map[string]int)
+	timerTime    = make(map[string]float64)
+)
+
+type Timer struct {
+	message string
+	time    time.Time
+}
+
+func newTimer(msg string) (t *Timer) {
+	// t = &Timer{
+	// 	message: msg,
+	// 	time:    time.Now(),
+	// }
+	// return t
+	return &Timer{}
+}
+
+func (t *Timer) stop() {
+	// p := time.Now().Sub(t.time)
+	// timerMutex.Lock()
+	// _, ok := timerCounter[t.message]
+	// if !ok {
+	// 	timerCounter[t.message] = 1
+	// 	timerTime[t.message] = p.Seconds()
+	// } else {
+	// 	timerCounter[t.message]++
+	// 	timerTime[t.message] += p.Seconds()
+	// }
+	// if timerCounter[t.message] == 1000 && timerTime[t.message]/float64(timerCounter[t.message]) > 0.01 {
+	// 	fmt.Printf("MSG: %s\nTIME ELAPSED: %f\n", t.message, timerTime[t.message]/float64(timerCounter[t.message]))
+	// 	timerCounter[t.message] = 0
+	// 	timerTime[t.message] = 0
+	// }
+	// timerMutex.Unlock()
 }

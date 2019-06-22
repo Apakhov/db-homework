@@ -153,11 +153,14 @@ CREATE TABLE posts (
   isEdited BOOLEAN NOT NULL DEFAULT false,
   message varchar(8192),
   parent INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+  mainparent INTEGER,
   thread bigserial NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
   path integer[] NOT NULL
 );
 
 CREATE INDEX posts_path_ind ON posts USING BTREE (path);
+CREATE INDEX posts_parent_ind ON posts USING BTREE (parent);
+CREATE INDEX posts_mainparent_ind ON posts USING BTREE (mainparent);
 CREATE INDEX posts_id_ind ON posts USING BTREE (id,thread);
 
 
@@ -186,6 +189,9 @@ DROP FUNCTION IF EXISTS parent_post();
 CREATE OR REPLACE FUNCTION parent_post() RETURNS trigger AS $$
 BEGIN
     IF new.parent IS NULL THEN
+      UPDATE posts
+        SET mainparent = new.id
+      WHERE id = new.id;
       return NULL;
     END IF;
     if NOT EXISTS(SELECT id FROM posts WHERE id = new.parent AND thread = new.thread LIMIT 1) THEN

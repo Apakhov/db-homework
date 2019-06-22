@@ -94,16 +94,17 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, t
 	ps = pdescrs
 	bufNum, buf := bs.get()
 	//fmt.Println(bufNum)
-	buf.WriteString("INSERT INTO posts (author, forum, message, thread, parent, path) VALUES")
+
+	buf.WriteString("INSERT INTO posts (author, forum, message, thread, parent, mainparent, path) VALUES")
 
 	for i, pdescr := range pdescrs {
 
 		if pdescr.Parent == nil || *pdescr.Parent <= 0 {
-			buf.WriteString(fmt.Sprintf("('%s', '%s', '%s', %d, NULL ,'{}')",
+			buf.WriteString(fmt.Sprintf("('%s', '%s', '%s', %d, NULL ,NULL,'{}')",
 				pdescr.Author, forum, pdescr.Message, id))
 		} else {
-			buf.WriteString(fmt.Sprintf("('%s', '%s', '%s', %d,%d,(SELECT path FROM posts WHERE id = %d) || %d)",
-				pdescr.Author, forum, pdescr.Message, id, *pdescr.Parent, *pdescr.Parent, *pdescr.Parent))
+			buf.WriteString(fmt.Sprintf("('%s', '%s', '%s', %d,%d,(SELECT mainparent FROM posts WHERE id = %d),(SELECT path FROM posts WHERE id = %d) || %d)",
+				pdescr.Author, forum, pdescr.Message, id, *pdescr.Parent, *pdescr.Parent, *pdescr.Parent, *pdescr.Parent))
 		}
 		if i < len(pdescrs)-1 {
 			buf.WriteByte(',')
@@ -121,7 +122,6 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, t
 	defer rows.Close()
 	if err != nil {
 		//fmt.Println("post create err: ", err)
-		//fmt.Println(buf.String())
 		threadMiss = true
 		return
 	}
@@ -136,7 +136,6 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, t
 	}
 
 	if e := rows.Err(); e != nil {
-		//fmt.Println("code scan err code: ", e.(pgx.PgError).Code, e.(pgx.PgError).Code == "23503", "23503")
 		f := e.(pgx.PgError)
 		//fmt.Printf("err: %+v\n%s\n", f, f.ConstraintName)
 		if e.(pgx.PgError).Code == "23503" && f.ConstraintName == "posts_author_fkey" {
@@ -153,6 +152,8 @@ func CreatePost(threadSlug *string, threadID *int, pdescrs []Post) (conf bool, t
 }
 
 func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, deck bool) (ps []Post) {
+	defer newTimer("GetPostsFlat").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -223,6 +224,8 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 }
 
 func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, deck bool) (ps []Post) {
+	defer newTimer("GetPostsTree").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -295,18 +298,12 @@ func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, dec
 }
 
 const getPostsParentTree = `SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts
-WHERE path && '{%d}'
-ORDER BY path || id::INTEGER;`
-
-const getPostsParentTreeSince = `SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts
-WHERE path && '{%d}' AND id > %d
-ORDER BY path || id::INTEGER;`
-
-const getPostsParentTreeSinceDesc = `SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts
-WHERE path && '{%d}' AND id < %d
+WHERE mainparent = %d AND NOT id = %d 
 ORDER BY path || id::INTEGER;`
 
 func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *int, deck bool) (parentPosts []Post) {
+	defer newTimer("GetPostsParentTree").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -374,7 +371,6 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 		//fmt.Println(`GetPostsParentTree find main posts: `, err)
 		return
 	}
-
 	parentPosts = make([]Post, 0, 0)
 	for rows.Next() {
 		p := Post{}
@@ -388,34 +384,29 @@ func GetPostsParentTree(threadSlug *string, threadID *int, limit *int, since *in
 			return nil
 		}
 		parentPosts = append(parentPosts, p)
+
 	}
 
-	ps := make([]Post, 0, 0)
-
+	ps := make([]Post, 0, len(parentPosts))
 	for _, parentPost := range parentPosts {
 		ps = append(ps, parentPost)
-		rows, err = tx.Query(fmt.Sprintf(getPostsParentTree, parentPost.ID))
-
-		if err != nil {
-			//fmt.Println("GetPostsParentTree query to childs err: ", err, "\nquery: ", fmt.Sprintf(getPostsParentTree, parentPost.ID))
-		}
-		//fmt.Println("GetPostsParentTree query success ")
-		for rows.Next() {
-			p := Post{}
-			err := rows.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &p.Message, &p.Parent, &p.Thread)
-			//fmt.Println(`GetPostsParentTree scan posts err: `, err, p)
-			if err != nil {
-				rows.Close()
-				//fmt.Println(`GetPostsParentTree scan posts err: `, err)
-				return nil
-			}
-			ps = append(ps, p)
-		}
-		//fmt.Println(len(ps))
-		rows.Close()
+		ps = treeSearch(ps)
 	}
 	//fmt.Println("on final", len(ps))
 	return ps
+}
+
+func treeSearch(parent []Post) (res []Post) {
+	l := len(parent) - 1
+	res = parent
+	rows, _ := conn.Query(fmt.Sprintf(getPostsParentTree, (parent)[l].ID, (parent)[l].ID))
+	for rows.Next() {
+		p := Post{}
+		rows.Scan(&p.Author, &p.Created, &p.Forum, &p.ID, &p.IsEdited, &p.Message, &p.Parent, &p.Thread)
+		res = append(res, p)
+	}
+	rows.Close()
+	return
 }
 
 const getPostInfoTPL = `
@@ -427,6 +418,8 @@ FROM ((posts p JOIN forums f on p.forum = f.slug AND p.id = $1) JOIN users u ON 
 
 // TODO: different queries
 func GetPostInfo(id int, needAuthor, needForum, needThread bool) (pi *PostInfo) {
+	defer newTimer("GetPostInfo").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 	pi = &PostInfo{
@@ -471,6 +464,7 @@ WHERE id = $2
 RETURNING p.author, p.created, p.forum, p.id, p.isEdited, p.message, p.parent, p.thread`
 
 func UpdatePost(id int, msg *string) (p *Post) {
+	defer newTimer("UpdatePost").stop()
 	//fmt.Println("post query: ", p)
 	tx, _ := conn.Begin()
 	defer tx.Rollback()

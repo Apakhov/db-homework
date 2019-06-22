@@ -68,6 +68,7 @@ SELECT * FROM threads
 WHERE forum = '`
 
 func GetThreadsByForumSlug(slug *string, limit *int, since *time.Time, desc bool) (ths []Thread, forumConf, ok bool) {
+	defer newTimer("GetThreadsByForumSlug").stop()
 
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
@@ -135,6 +136,8 @@ DO
    SET rate = EXCLUDED.rate;`
 
 func VoteID(id int, vote *Vote) (th *Thread) {
+	defer newTimer("VoteID").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -165,6 +168,8 @@ DO
    SET rate = EXCLUDED.rate;`
 
 func VoteSlug(slug *string, vote *Vote) (th *Thread) {
+	defer newTimer("VoteSlug").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -191,6 +196,8 @@ SET message = CASE WHEN LENGTH($1) > 0 THEN $1 ELSE message END,
 WHERE slug = $3;`
 
 func UpdateThreadSlug(slug *string, vote *ThreadUPD) (th *Thread) {
+	defer newTimer("UpdateThreadSlug").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -219,6 +226,8 @@ SET message = CASE WHEN LENGTH($1) > 0 THEN $1 ELSE message END,
 WHERE id = $3;`
 
 func UpdateThreadID(id *int, vote *ThreadUPD) (th *Thread) {
+	defer newTimer("UpdateThreadID").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -241,6 +250,8 @@ func UpdateThreadID(id *int, vote *ThreadUPD) (th *Thread) {
 }
 
 func GetThreadSlug(slug *string) (th *Thread) {
+	defer newTimer("GetThreadSlug").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
@@ -256,6 +267,8 @@ func GetThreadSlug(slug *string) (th *Thread) {
 }
 
 func GetThreadID(id *int) (th *Thread) {
+	defer newTimer("GetThreadID").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 

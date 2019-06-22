@@ -9,6 +9,7 @@ insert into users (about, email, fullname, nickname)
 values($1, $2, $3, $4)`
 
 func CreateUser(user *User) []User {
+	defer newTimer("CreateUser").stop()
 	go func() {
 		ctCh <- struct{}{}
 		usersCt++
@@ -37,6 +38,8 @@ SELECT about, email, fullname, nickname FROM users
 WHERE nickname = $1`
 
 func GetUser(nick string) *User {
+	defer newTimer("GetUser").stop()
+
 	rows, _ := conn.Query(getUserTpl, nick)
 	defer rows.Close()
 	if rows.Next() {
@@ -65,6 +68,7 @@ SELECT nickname FROM users
 WHERE email = $1;`
 
 func UpdateUser(user *User) (*User, *string) {
+	defer newTimer("UpdateUser").stop()
 	rows, _ := conn.Query(findSameNickTpl, user.Nickname)
 	if rows.Next() {
 		rows.Close()

@@ -52,6 +52,8 @@ SELECT posts, slug, threads, title, author FROM forums
 WHERE slug = $1 LIMIT 1`
 
 func GetForum(slug string) *Forum {
+	defer newTimer("GetForum").stop()
+
 	//fmt.Println("forum", slug, "getting")
 	rows, _ := conn.Query(getForumTpl, slug)
 	defer rows.Close()
@@ -64,6 +66,8 @@ func GetForum(slug string) *Forum {
 }
 
 func GetUsers(slug *string, limit *int, since *string, desc *bool) (us []User, ok bool) {
+	defer newTimer("GetUsers").stop()
+
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
