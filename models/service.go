@@ -43,7 +43,7 @@ func init() {
 		log.Fatalf("cant connest to db 1: %v", err)
 	}
 	log.Println("base up 1")
-	Clear()
+	//Clear()
 	conn.Close()
 	conn, err = pgx.NewConnPool(pgx.ConnPoolConfig{
 		ConnConfig:     config,
@@ -170,6 +170,9 @@ CREATE TABLE users_forums(
   forum CITEXT NOT NULL REFERENCES forums(slug) ON DELETE CASCADE,
   CONSTRAINT nick_forum_pkey PRIMARY KEY (nickname, forum)
 );
+
+CREATE INDEX users_forums_nickname_forum_ind ON users_forums USING BTREE (nickname,forum);
+CREATE INDEX users_nickname_forums_forum_ind ON users_forums USING BTREE (forum,nickname);
 
 
 DROP TABLE IF EXISTS info CASCADE;

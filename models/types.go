@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -82,9 +83,15 @@ type DBInfo struct {
 }
 
 var (
-	timerMutex   = sync.Mutex{}
-	timerCounter = make(map[string]int)
-	timerTime    = make(map[string]float64)
+	timerRequests   = 0
+	timerTimes      = float64(0)
+	timerCrit       = 0.01
+	timerElapsed    = 100
+	timerMutex      = sync.Mutex{}
+	timerCounterAll = make(map[string]int)
+	timerCounter    = make(map[string]int)
+	timerTimeAll    = make(map[string]float64)
+	timerTime       = make(map[string]float64)
 )
 
 type Timer struct {
@@ -104,18 +111,47 @@ func newTimer(msg string) (t *Timer) {
 func (t *Timer) stop() {
 	// p := time.Now().Sub(t.time)
 	// timerMutex.Lock()
+	// timerRequests++
+	// timerTimes += p.Seconds()
 	// _, ok := timerCounter[t.message]
 	// if !ok {
 	// 	timerCounter[t.message] = 1
 	// 	timerTime[t.message] = p.Seconds()
+	// 	timerCounterAll[t.message] = 1
+	// 	timerTimeAll[t.message] = p.Seconds()
 	// } else {
 	// 	timerCounter[t.message]++
 	// 	timerTime[t.message] += p.Seconds()
+	// 	timerCounterAll[t.message]++
+	// 	timerTimeAll[t.message] += p.Seconds()
 	// }
-	// if timerCounter[t.message] == 1000 && timerTime[t.message]/float64(timerCounter[t.message]) > 0.01 {
-	// 	fmt.Printf("MSG: %s\nTIME ELAPSED: %f\n", t.message, timerTime[t.message]/float64(timerCounter[t.message]))
+	// if timerCounter[t.message] == timerElapsed {
+	// 	timerPrintStat(t.message)
 	// 	timerCounter[t.message] = 0
 	// 	timerTime[t.message] = 0
 	// }
 	// timerMutex.Unlock()
+}
+
+func timerPrintStat(message string) {
+	importance := ""
+	if timerTime[message]/float64(timerCounter[message]) > timerCrit {
+		importance = "!!!!!!!!!!!"
+	}
+	if timerTime[message]/float64(timerCounter[message]) > timerCrit*10 {
+		importance = "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	}
+	if timerTime[message]/float64(timerCounter[message]) > timerCrit*100 {
+		importance = "RED ALERT!!!RED ALERT!!!RED ALERT!!!RED ALERT!!!RED ALERT!!!RED ALERT!!!RED ALERT!!!RED ALERT!!!"
+	}
+	fmt.Printf("MSG: %s\nAVGTloc: %f\nAVGTall: %f\nREQS: %f%s\nTIME: %f%s   %s\n\n",
+		message,
+		timerTime[message]/float64(timerCounter[message]),
+		timerTimeAll[message]/float64(timerCounterAll[message]),
+		float64(timerCounterAll[message])/float64(timerRequests),
+		"%",
+		timerTimeAll[message]/timerTimes,
+		"%",
+		importance,
+	)
 }
