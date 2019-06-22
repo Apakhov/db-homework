@@ -43,7 +43,7 @@ func init() {
 		log.Fatalf("cant connest to db 1: %v", err)
 	}
 	log.Println("base up 1")
-	//Clear()
+	Clear()
 	conn.Close()
 	conn, err = pgx.NewConnPool(pgx.ConnPoolConfig{
 		ConnConfig:     config,
