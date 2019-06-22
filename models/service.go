@@ -101,6 +101,10 @@ CREATE TABLE users (
   nickname CITEXT NOT NULL UNIQUE
 );
 
+CREATE INDEX users_nickname_ind ON users USING BTREE (nickname);
+CREATE INDEX users_email_ind ON users USING BTREE (email);
+
+
 DROP TABLE IF EXISTS forums CASCADE ;
 CREATE TABLE forums (
   id bigserial NOT NULL PRIMARY KEY,
@@ -110,6 +114,8 @@ CREATE TABLE forums (
   title varchar(128) NOT NULL,
   author CITEXT NOT NULL REFERENCES users(nickname) ON DELETE CASCADE
 );
+
+CREATE INDEX forums_slug_ind ON forums USING BTREE (slug);
 
 
 DROP TABLE IF EXISTS threads CASCADE ;
@@ -126,6 +132,7 @@ CREATE TABLE threads (
 
 CREATE INDEX threads_id_ind ON threads USING BTREE (id);
 CREATE INDEX threads_slug_ind ON threads USING BTREE (slug);
+CREATE INDEX threads_forum_created_ind ON threads USING BTREE (forum, created);
 
 
 DROP TABLE IF EXISTS users_threads CASCADE;

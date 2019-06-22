@@ -1,7 +1,6 @@
 package models
 
 import (
-	"bytes"
 	"strconv"
 	"time"
 
@@ -24,14 +23,14 @@ func CreateThread(tdescr *ThreadDescr) (nameMiss bool, slugMiss bool, th Thread,
 	defer tx.Rollback()
 
 	//checking existense
-	row := tx.QueryRow("SELECT nickname FROM users WHERE nickname = $1;", tdescr.Author)
+	row := tx.QueryRow("SELECT nickname FROM users WHERE nickname = $1 LIMIT 1;", tdescr.Author)
 	err = row.Scan(&tdescr.Author)
 	if err == pgx.ErrNoRows {
 		nameMiss = true
 		return
 	}
 	//fmt.Println("possible err:", err)
-	row = tx.QueryRow("SELECT slug FROM forums WHERE slug = $1;", tdescr.Forum)
+	row = tx.QueryRow("SELECT slug FROM forums WHERE slug = $1 LIMIT 1;", tdescr.Forum)
 	err = row.Scan(&tdescr.Forum)
 	if err == pgx.ErrNoRows {
 		slugMiss = true
@@ -81,7 +80,7 @@ func GetThreadsByForumSlug(slug *string, limit *int, since *time.Time, desc bool
 	}
 	rows.Close()
 
-	var queryBuffer bytes.Buffer
+	bufNum, queryBuffer := bs.get()
 	queryBuffer.WriteString(getThreadsByForumSlugTpl)
 	queryBuffer.WriteString(*slug)
 	if since.IsZero() {
@@ -108,8 +107,8 @@ func GetThreadsByForumSlug(slug *string, limit *int, since *time.Time, desc bool
 		rows, err = tx.Query(queryBuffer.String())
 	} else {
 		rows, err = tx.Query(queryBuffer.String(), since)
-
 	}
+	bs.back(bufNum)
 	defer rows.Close()
 	if err != nil {
 		//fmt.Println("thread find query err: ", err)

@@ -158,9 +158,9 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 
 	var row *pgx.Row
 	if threadID == nil {
-		row = tx.QueryRow(`(SELECT id FROM threads WHERE slug = $1)`, threadSlug)
+		row = tx.QueryRow(`(SELECT id FROM threads WHERE slug = $1 LIMIT 1)`, threadSlug)
 	} else {
-		row = tx.QueryRow(`(SELECT id FROM threads WHERE id = $1)`, threadID)
+		row = tx.QueryRow(`(SELECT id FROM threads WHERE id = $1 LIMIT 1)`, threadID)
 	}
 	threadIDNotPtr := 0
 	threadID = &threadIDNotPtr
@@ -173,7 +173,7 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 		return
 	}
 
-	var buf bytes.Buffer
+	bufNum, buf := bs.get()
 
 	buf.WriteString(`SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts WHERE thread = `)
 	buf.WriteString(strconv.Itoa(*threadID))
@@ -196,6 +196,7 @@ func GetPostsFlat(threadSlug *string, threadID *int, limit *int, since *int, dec
 	}
 
 	rows, err := tx.Query(buf.String())
+	bs.back(bufNum)
 	defer rows.Close()
 	if err != nil {
 		//fmt.Println(`getPostsFlat find posts err: `, err)
@@ -242,7 +243,7 @@ func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, dec
 		return
 	}
 
-	var buf bytes.Buffer
+	bufNum, buf := bs.get()
 
 	buf.WriteString(`SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts
 	WHERE thread = `)
@@ -268,6 +269,7 @@ func GetPostsTree(threadSlug *string, threadID *int, limit *int, since *int, dec
 	}
 
 	rows, err := tx.Query(buf.String())
+	bs.back(bufNum)
 	defer rows.Close()
 	if err != nil {
 		//fmt.Println(`GetPostsTree find posts err: `, err)

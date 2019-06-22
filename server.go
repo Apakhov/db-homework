@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/Apakhov/db-homework/controllers"
@@ -9,10 +8,6 @@ import (
 	"github.com/buaazp/fasthttprouter"
 	"github.com/valyala/fasthttp"
 )
-
-func Index(ctx *fasthttp.RequestCtx) {
-	fmt.Fprint(ctx, "Welcome!\n")
-}
 
 func CreateForumControl(ctx *fasthttp.RequestCtx) {
 	if ctx.UserValue("slug").(string) == "create" {
@@ -23,8 +18,8 @@ func CreateForumControl(ctx *fasthttp.RequestCtx) {
 }
 
 func main() {
+
 	router := fasthttprouter.New()
-	router.GET("/", Index)
 	router.POST("/api/user/:nickname/create", controllers.CreateUser)
 	router.GET("/api/user/:nickname/profile", controllers.GetUser)
 	router.POST("/api/user/:nickname/profile", controllers.UpdateUser)

@@ -49,7 +49,7 @@ func CreateForum(fdescr *ForumDescr) (*Forum, *string) {
 
 const getForumTpl = `
 SELECT posts, slug, threads, title, author FROM forums
-WHERE slug = $1`
+WHERE slug = $1 LIMIT 1`
 
 func GetForum(slug string) *Forum {
 	//fmt.Println("forum", slug, "getting")
@@ -67,7 +67,7 @@ func GetUsers(slug *string, limit *int, since *string, desc *bool) (us []User, o
 	tx, _ := conn.Begin()
 	defer tx.Rollback()
 
-	row := tx.QueryRow(`SELECT id FROM forums WHERE slug = $1`, *slug)
+	row := tx.QueryRow(`SELECT id FROM forums WHERE slug = $1 LIMIT 1`, *slug)
 	var threadID int
 	err := row.Scan(&threadID)
 	if err == pgx.ErrNoRows {
